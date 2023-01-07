@@ -45,6 +45,9 @@ namespace Discord.WebSocket
         /// <inheritdoc/>
         public ForumSortOrder? DefaultSortOrder { get; private set; }
 
+        /// <inheritdoc />
+        public ForumLayout DefaultLayout { get; private set; }
+
         /// <summary>
         ///     Gets the parent (category) of this channel in the guild's channel list.
         /// </summary>
@@ -93,6 +96,8 @@ namespace Discord.WebSocket
             }
 
             CategoryId = model.CategoryId.GetValueOrDefault();
+
+            DefaultLayout = model.DefaultForumLayout.GetValueOrDefault();
         }
 
         /// <inheritdoc />
@@ -135,9 +140,9 @@ namespace Discord.WebSocket
             MessageComponent components = null, ISticker[] stickers = null, Embed[] embeds = null, MessageFlags flags = MessageFlags.None, ForumTag[] tags = null)
             => ThreadHelper.CreatePostAsync(this, Discord, title, attachments, archiveDuration, slowmode, text, embed, options, allowedMentions, components, stickers, embeds, flags, tags?.Select(tag => tag.Id).ToArray());
 
-        /// <inheritdoc cref="IForumChannel.GetActiveThreadsAsync(RequestOptions)"/>
+        /// <inheritdoc cref="ITextChannel.GetActiveThreadsAsync(RequestOptions)"/>
         public Task<IReadOnlyCollection<RestThreadChannel>> GetActiveThreadsAsync(RequestOptions options = null)
-            => ThreadHelper.GetActiveThreadsAsync(Guild, Discord, options);
+            => ThreadHelper.GetActiveThreadsAsync(Guild, Id, Discord, options);
 
         /// <inheritdoc cref="IForumChannel.GetJoinedPrivateArchivedThreadsAsync(int?, DateTimeOffset?, RequestOptions)"/>
         public Task<IReadOnlyCollection<RestThreadChannel>> GetJoinedPrivateArchivedThreadsAsync(int? limit = null, DateTimeOffset? before = null, RequestOptions options = null)
@@ -160,16 +165,17 @@ namespace Discord.WebSocket
             => await GetPrivateArchivedThreadsAsync(limit, before, options).ConfigureAwait(false);
         async Task<IReadOnlyCollection<IThreadChannel>> IForumChannel.GetJoinedPrivateArchivedThreadsAsync(int? limit, DateTimeOffset? before, RequestOptions options)
             => await GetJoinedPrivateArchivedThreadsAsync(limit, before, options).ConfigureAwait(false);
+
         async Task<IThreadChannel> IForumChannel.CreatePostAsync(string title, ThreadArchiveDuration archiveDuration, int? slowmode, string text, Embed embed, RequestOptions options, AllowedMentions allowedMentions, MessageComponent components, ISticker[] stickers, Embed[] embeds, MessageFlags flags, ForumTag[] tags)
-            => await CreatePostAsync(title, archiveDuration, slowmode, text, embed, options, allowedMentions, components, stickers, embeds, flags).ConfigureAwait(false);
+            => await CreatePostAsync(title, archiveDuration, slowmode, text, embed, options, allowedMentions, components, stickers, embeds, flags, tags).ConfigureAwait(false);
         async Task<IThreadChannel> IForumChannel.CreatePostWithFileAsync(string title, string filePath, ThreadArchiveDuration archiveDuration, int? slowmode, string text, Embed embed, RequestOptions options, bool isSpoiler, AllowedMentions allowedMentions, MessageComponent components, ISticker[] stickers, Embed[] embeds, MessageFlags flags, ForumTag[] tags)
-            => await CreatePostWithFileAsync(title, filePath, archiveDuration, slowmode, text, embed, options, isSpoiler, allowedMentions, components, stickers, embeds, flags).ConfigureAwait(false);
+            => await CreatePostWithFileAsync(title, filePath, archiveDuration, slowmode, text, embed, options, isSpoiler, allowedMentions, components, stickers, embeds, flags, tags).ConfigureAwait(false);
         async Task<IThreadChannel> IForumChannel.CreatePostWithFileAsync(string title, Stream stream, string filename, ThreadArchiveDuration archiveDuration, int? slowmode, string text, Embed embed, RequestOptions options, bool isSpoiler, AllowedMentions allowedMentions, MessageComponent components, ISticker[] stickers, Embed[] embeds, MessageFlags flags, ForumTag[] tags)
-            => await CreatePostWithFileAsync(title, stream, filename, archiveDuration, slowmode, text, embed, options, isSpoiler, allowedMentions, components, stickers, embeds, flags).ConfigureAwait(false);
+            => await CreatePostWithFileAsync(title, stream, filename, archiveDuration, slowmode, text, embed, options, isSpoiler, allowedMentions, components, stickers, embeds, flags, tags).ConfigureAwait(false);
         async Task<IThreadChannel> IForumChannel.CreatePostWithFileAsync(string title, FileAttachment attachment, ThreadArchiveDuration archiveDuration, int? slowmode, string text, Embed embed, RequestOptions options, AllowedMentions allowedMentions, MessageComponent components, ISticker[] stickers, Embed[] embeds, MessageFlags flags, ForumTag[] tags)
-            => await CreatePostWithFileAsync(title, attachment, archiveDuration, slowmode, text, embed, options, allowedMentions, components, stickers, embeds, flags).ConfigureAwait(false);
+            => await CreatePostWithFileAsync(title, attachment, archiveDuration, slowmode, text, embed, options, allowedMentions, components, stickers, embeds, flags, tags).ConfigureAwait(false);
         async Task<IThreadChannel> IForumChannel.CreatePostWithFilesAsync(string title, IEnumerable<FileAttachment> attachments, ThreadArchiveDuration archiveDuration, int? slowmode, string text, Embed embed, RequestOptions options, AllowedMentions allowedMentions, MessageComponent components, ISticker[] stickers, Embed[] embeds, MessageFlags flags, ForumTag[] tags)
-            => await CreatePostWithFilesAsync(title, attachments, archiveDuration, slowmode, text, embed, options, allowedMentions, components, stickers, embeds, flags);
+            => await CreatePostWithFilesAsync(title, attachments, archiveDuration, slowmode, text, embed, options, allowedMentions, components, stickers, embeds, flags, tags);
 
         #endregion
 

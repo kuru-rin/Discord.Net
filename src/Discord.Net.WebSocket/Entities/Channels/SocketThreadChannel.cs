@@ -95,6 +95,9 @@ namespace Discord.WebSocket
         /// <inheritdoc cref="IThreadChannel.CreatedAt"/>
         public override DateTimeOffset CreatedAt { get; }
 
+        /// <inheritdoc cref="IThreadChannel.OwnerId"/>
+        ulong IThreadChannel.OwnerId => _ownerId;
+
         /// <summary>
         ///     Gets a collection of cached users within this thread.
         /// </summary>
@@ -372,6 +375,10 @@ namespace Discord.WebSocket
         ///     <b>This method is not supported in threads.</b>
         /// </remarks>
         public override Task SyncPermissionsAsync(RequestOptions options = null)
+            => throw new NotSupportedException("This method is not supported in threads.");
+
+        /// <inheritdoc/> <exception cref="NotSupportedException">This method is not supported in threads.</exception>
+        public override Task<IReadOnlyCollection<RestThreadChannel>> GetActiveThreadsAsync(RequestOptions options = null)
             => throw new NotSupportedException("This method is not supported in threads.");
 
         string IChannel.Name => Name;
