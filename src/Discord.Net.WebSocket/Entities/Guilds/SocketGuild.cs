@@ -2203,6 +2203,10 @@ namespace Discord.WebSocket
         async Task<IRole> IGuild.CreateRoleAsync(string name, GuildPermissions? permissions, Color? color, bool isHoisted, bool isMentionable, RequestOptions options, Image? icon, Emoji emoji)
             => await CreateRoleAsync(name, permissions, color, isHoisted, isMentionable, options, icon, emoji).ConfigureAwait(false);
 
+        public Task AddUserToRoleAsync(ulong userId, ulong roleId, RequestOptions options = null) => Discord.ApiClient.AddRoleAsync(Id, userId, roleId, options);
+
+        public Task AddUserToRoleAsync(IUser user, ulong roleId, RequestOptions options = null) => AddUserToRoleAsync(user.Id, roleId, options);
+
         /// <inheritdoc />
         async Task<IReadOnlyCollection<IGuildUser>> IGuild.GetUsersAsync(CacheMode mode, RequestOptions options)
         {
