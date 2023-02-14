@@ -3,13 +3,13 @@ using Discord.API.Rest;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using WidgetModel = Discord.API.GuildWidget;
+using ImageModel = Discord.API.Image;
 using Model = Discord.API.Guild;
 using RoleModel = Discord.API.Role;
-using ImageModel = Discord.API.Image;
-using System.IO;
+using WidgetModel = Discord.API.GuildWidget;
 
 namespace Discord.Rest
 {
@@ -285,6 +285,8 @@ namespace Discord.Rest
                         Deny = overwrite.Permissions.DenyValue.ToString()
                     }).ToArray()
                     : Optional.Create<API.Overwrite[]>(),
+                VideoQuality = props.VideoQualityMode,
+                RtcRegion = props.RTCRegion
             };
             var model = await client.ApiClient.CreateGuildChannelAsync(guild.Id, args, options).ConfigureAwait(false);
             return RestVoiceChannel.Create(client, guild, model);
@@ -1038,7 +1040,7 @@ namespace Discord.Rest
             {
                 Enabled = enabled,
                 Description = description,
-                WelcomeChannels = channels?.Select(ch => new API.WelcomeScreenChannel 
+                WelcomeChannels = channels?.Select(ch => new API.WelcomeScreenChannel
                 {
                     ChannelId = ch.Id,
                     Description = ch.Description,
@@ -1049,7 +1051,7 @@ namespace Discord.Rest
 
             var model = await client.ApiClient.ModifyGuildWelcomeScreenAsync(args, guild.Id, options);
 
-            if(model.WelcomeChannels.Length == 0)
+            if (model.WelcomeChannels.Length == 0)
                 return null;
 
             return new WelcomeScreen(model.Description.GetValueOrDefault(null), model.WelcomeChannels.Select(
