@@ -1732,7 +1732,7 @@ namespace Discord.API
         #region Guild Invites
         /// <exception cref="ArgumentException"><paramref name="inviteId"/> cannot be blank.</exception>
         /// <exception cref="ArgumentNullException"><paramref name="inviteId"/> must not be <see langword="null"/>.</exception>
-        public async Task<InviteMetadata> GetInviteAsync(string inviteId, RequestOptions options = null)
+        public async Task<InviteMetadata> GetInviteAsync(string inviteId, RequestOptions options = null, ulong? scheduledEventId = null)
         {
             Preconditions.NotNullOrEmpty(inviteId, nameof(inviteId));
             options = RequestOptions.CreateOrClone(options);
@@ -1745,9 +1745,13 @@ namespace Discord.API
             if (index >= 0)
                 inviteId = inviteId.Substring(index + 1);
 
+            var scheduledEventQuery = scheduledEventId is not null
+                ? $"&guild_scheduled_event_id={scheduledEventId}"
+                : string.Empty;
+
             try
             {
-                return await SendAsync<InviteMetadata>("GET", () => $"invites/{inviteId}?with_counts=true", new BucketIds(), options: options).ConfigureAwait(false);
+                return await SendAsync<InviteMetadata>("GET", () => $"invites/{inviteId}?with_counts=true&with_expiration=true{scheduledEventQuery}", new BucketIds(), options: options).ConfigureAwait(false);
             }
             catch (HttpException ex) when (ex.HttpCode == HttpStatusCode.NotFound) { return null; }
         }
@@ -2119,6 +2123,58 @@ namespace Discord.API
 
         #endregion
 
+        #region Guild AutoMod
+
+        public async Task<AutoModerationRule[]> GetGuildAutoModRulesAsync(ulong guildId, RequestOptions options)
+        {
+            Preconditions.NotEqual(guildId, 0, nameof(guildId));
+
+            options = RequestOptions.CreateOrClone(options);
+
+            return await SendAsync<AutoModerationRule[]>("GET", () => $"guilds/{guildId}/auto-moderation/rules", new BucketIds(guildId: guildId), options: options);
+        }
+
+        public async Task<AutoModerationRule> GetGuildAutoModRuleAsync(ulong guildId, ulong ruleId, RequestOptions options)
+        {
+            Preconditions.NotEqual(guildId, 0, nameof(guildId));
+            Preconditions.NotEqual(ruleId, 0, nameof(ruleId));
+
+            options = RequestOptions.CreateOrClone(options);
+
+            return await SendAsync<AutoModerationRule>("GET", () => $"guilds/{guildId}/auto-moderation/rules/{ruleId}", new BucketIds(guildId), options: options);
+        }
+
+        public async Task<AutoModerationRule> CreateGuildAutoModRuleAsync(ulong guildId, CreateAutoModRuleParams args, RequestOptions options)
+        {
+            Preconditions.NotEqual(guildId, 0, nameof(guildId));
+
+            options = RequestOptions.CreateOrClone(options);
+
+            return await SendJsonAsync<AutoModerationRule>("POST", () => $"guilds/{guildId}/auto-moderation/rules", args, new BucketIds(guildId: guildId), options: options);
+        }
+
+        public async Task<AutoModerationRule> ModifyGuildAutoModRuleAsync(ulong guildId, ulong ruleId, ModifyAutoModRuleParams args, RequestOptions options)
+        {
+            Preconditions.NotEqual(guildId, 0, nameof(guildId));
+            Preconditions.NotEqual(ruleId, 0, nameof(ruleId));
+
+            options = RequestOptions.CreateOrClone(options);
+
+            return await SendJsonAsync<AutoModerationRule>("PATCH", () => $"guilds/{guildId}/auto-moderation/rules/{ruleId}", args, new BucketIds(guildId: guildId), options: options);
+        }
+
+        public async Task DeleteGuildAutoModRuleAsync(ulong guildId, ulong ruleId, RequestOptions options)
+        {
+            Preconditions.NotEqual(guildId, 0, nameof(guildId));
+            Preconditions.NotEqual(ruleId, 0, nameof(ruleId));
+
+            options = RequestOptions.CreateOrClone(options);
+
+            await SendAsync("DELETE", () => $"guilds/{guildId}/auto-moderation/rules/{ruleId}", new BucketIds(guildId: guildId), options: options);
+        }
+
+        #endregion
+
         #region Guild Welcome Screen
 
         public async Task<WelcomeScreen> GetGuildWelcomeScreenAsync(ulong guildId, RequestOptions options = null)
@@ -2276,7 +2332,7 @@ namespace Discord.API
                     .Append(args.ActionType.Value);
             }
 
-            // Still use string interp for the query w/o params, as this is necessary for CreateBucketId
+            // Still use string interpolation for the query w/o params, as this is necessary for CreateBucketId
             endpoint = () => $"guilds/{guildId}/audit-logs?limit={limit}{queryArgs.ToString()}";
             return await SendAsync<AuditLog>("GET", endpoint, ids, options: options).ConfigureAwait(false);
         }
