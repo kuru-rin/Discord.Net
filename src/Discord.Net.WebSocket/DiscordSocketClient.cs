@@ -390,7 +390,7 @@ namespace Discord.WebSocket
         /// <param name="options">The options to be used when sending the request.</param>
         /// <returns>
         ///     A task that represents the asynchronous get operation. The task result contains the channel associated
-        ///     with the snowflake identifier; <c>null</c> when the channel cannot be found.
+        ///     with the snowflake identifier; <see langword="null" /> when the channel cannot be found.
         /// </returns>
         public async ValueTask<IChannel> GetChannelAsync(ulong id, RequestOptions options = null)
             => GetChannel(id) ?? (IChannel)await ClientHelper.GetChannelAsync(this, id, options).ConfigureAwait(false);
@@ -408,7 +408,7 @@ namespace Discord.WebSocket
         /// <param name="options">The options to be used when sending the request.</param>
         /// <returns>
         ///     A task that represents the asynchronous get operation. The task result contains the user associated with
-        ///     the snowflake identifier; <c>null</c> if the user is not found.
+        ///     the snowflake identifier; <see langword="null" /> if the user is not found.
         /// </returns>
         public async ValueTask<IUser> GetUserAsync(ulong id, RequestOptions options = null)
             => await ((IDiscordClient)this).GetUserAsync(id, CacheMode.AllowDownload, options).ConfigureAwait(false);
@@ -425,8 +425,8 @@ namespace Discord.WebSocket
         public override SocketUser GetUser(ulong id)
             => State.GetUser(id);
         /// <inheritdoc />
-        public override SocketUser GetUser(string username, string discriminator)
-            => State.Users.FirstOrDefault(x => x.Discriminator == discriminator && x.Username == username);
+        public override SocketUser GetUser(string username, string discriminator = null)
+            => State.Users.FirstOrDefault(x => (discriminator is null || x.Discriminator == discriminator) && x.Username == username);
 
         /// <summary>
         ///     Gets a global application command.
@@ -2046,8 +2046,8 @@ namespace Discord.WebSocket
                                     var user = (channel as SocketChannel)?.GetUser(data.UserId);
                                     if (user == null)
                                     {
-                                        if (guild != null)
-                                            user = guild.AddOrUpdateUser(data.Member);
+                                        if (guild != null && data.Member.IsSpecified)
+                                            user = guild.AddOrUpdateUser(data.Member.Value);
                                     }
                                     var cacheableUser = new Cacheable<IUser, ulong>(user, data.UserId, user != null, async () => await GetUserAsync(data.UserId).ConfigureAwait(false));
 
@@ -2584,7 +2584,7 @@ namespace Discord.WebSocket
                                         return;
                                     }
 
-                                    var thread = (SocketThreadChannel)guild.GetChannel(data.Id);
+                                    var thread = (SocketThreadChannel)guild.RemoveChannel(State, data.Id);
 
                                     var cacheable = new Cacheable<SocketThreadChannel, ulong>(thread, data.Id, thread != null, null);
 
