@@ -1926,8 +1926,6 @@ namespace Discord.API
 
             bool isCurrentUser = userId == CurrentUserId;
 
-            if (args.RoleIds.IsSpecified)
-                Preconditions.NotEveryoneRole(args.RoleIds.Value, guildId, nameof(args.RoleIds));
             if (isCurrentUser && args.Nickname.IsSpecified)
             {
                 var nickArgs = new Rest.ModifyCurrentUserNickParams(args.Nickname.Value ?? "");
@@ -2250,6 +2248,15 @@ namespace Discord.API
             options = RequestOptions.CreateOrClone(options);
 
             return await SendAsync<GuildOnboarding>("GET", () => $"guilds/{guildId}/onboarding", new BucketIds(guildId: guildId), options: options);
+        }
+
+        public async Task<GuildOnboarding> ModifyGuildOnboardingAsync(ulong guildId, ModifyGuildOnboardingParams args,  RequestOptions options)
+        {
+            Preconditions.NotEqual(guildId, 0, nameof(guildId));
+
+            options = RequestOptions.CreateOrClone(options);
+
+            return await SendJsonAsync<GuildOnboarding>("PUT", () => $"guilds/{guildId}/onboarding", args, new BucketIds(guildId: guildId), options: options);
         }
 
         #endregion
