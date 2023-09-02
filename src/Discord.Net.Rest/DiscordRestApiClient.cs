@@ -2391,6 +2391,12 @@ namespace Discord.API
             return SendAsync<IReadOnlyCollection<UserGuild>>("GET", () => $"users/@me/guilds?limit={limit}&after={afterGuildId}&with_counts=true", new BucketIds(), options: options);
         }
 
+        public async ValueTask<IReadOnlyCollection<UserGuild>> GetAllMyGuildsAsync(RequestOptions options = null)
+        {
+            options = RequestOptions.CreateOrClone(options);
+            return await SendAsync<IReadOnlyCollection<UserGuild>>("GET", () => "users/@me/guilds", new BucketIds(), options: options).ConfigureAwait(false);
+        }
+
         public Task<Application> GetMyApplicationAsync(RequestOptions options = null)
         {
             options = RequestOptions.CreateOrClone(options);
