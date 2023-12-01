@@ -38,6 +38,12 @@ namespace Discord.API.Rest
         [JsonProperty("nsfw")]
         public Optional<bool> Nsfw { get; set; }
 
+        [JsonProperty("integration_types")]
+        public Optional<ApplicationIntegrationType[]> IntegrationTypes { get; set; }
+
+        [JsonProperty("contexts")]
+        public Optional<ApplicationCommandContextType[]> Contexts { get; set; }
+
         public CreateApplicationCommandParams() { }
         public CreateApplicationCommandParams(string name, string description, ApplicationCommandType type, ApplicationCommandOption[] options = null,
             IDictionary<string, string> nameLocalizations = null, IDictionary<string, string> descriptionLocalizations = null, bool nsfw = false)

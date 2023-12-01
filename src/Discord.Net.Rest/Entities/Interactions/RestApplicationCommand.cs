@@ -66,6 +66,10 @@ namespace Discord.Rest
         ///     Only returned when the `withLocalizations` query parameter is set to <see langword="false"/> when requesting the command.
         /// </remarks>
         public string DescriptionLocalized { get; private set; }
+        
+        public ApplicationIntegrationType[] IntegrationTypes { get; private set; }
+
+        public ApplicationCommandContextType[] Contexts { get; private set; }
 
         /// <inheritdoc/>
         public DateTimeOffset CreatedAt
@@ -105,6 +109,8 @@ namespace Discord.Rest
             IsEnabledInDm = model.DmPermission.GetValueOrDefault(true).GetValueOrDefault(true);
             DefaultMemberPermissions = new GuildPermissions((ulong)model.DefaultMemberPermission.GetValueOrDefault(0).GetValueOrDefault(0));
             IsNsfw = model.Nsfw.GetValueOrDefault(false).GetValueOrDefault(false);
+            IntegrationTypes = model.IntegrationTypes.GetValueOrDefault(Array.Empty<ApplicationIntegrationType>());
+            Contexts = model.Contexts.GetValueOrDefault(Array.Empty<ApplicationCommandContextType>());
         }
 
         /// <inheritdoc/>

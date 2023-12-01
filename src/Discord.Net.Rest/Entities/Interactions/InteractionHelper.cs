@@ -109,6 +109,17 @@ namespace Discord.Rest
                 DefaultMemberPermission = arg.DefaultMemberPermissions.ToNullable(),
                 DmPermission = arg.IsDMEnabled.ToNullable(),
                 Nsfw = arg.IsNsfw.GetValueOrDefault(false),
+                IntegrationTypes = new[]
+                {
+                    ApplicationIntegrationType.GuildInstall,
+                    ApplicationIntegrationType.UserInstall
+                },
+                Contexts = new[]
+                {
+                    ApplicationCommandContextType.BotDM,
+                    ApplicationCommandContextType.Guild,
+                    ApplicationCommandContextType.PrivateChannel
+                }
             };
 
             if (arg is SlashCommandProperties slashProps)
@@ -149,7 +160,18 @@ namespace Discord.Rest
                     // TODO: better conversion to nullable optionals
                     DefaultMemberPermission = arg.DefaultMemberPermissions.ToNullable(),
                     DmPermission = arg.IsDMEnabled.ToNullable(),
-                    Nsfw = arg.IsNsfw.GetValueOrDefault(false)
+                    Nsfw = arg.IsNsfw.GetValueOrDefault(false),
+                    IntegrationTypes = new[]
+                    {
+                        ApplicationIntegrationType.GuildInstall,
+                        ApplicationIntegrationType.UserInstall
+                    },
+                    Contexts = new[]
+                    {
+                        ApplicationCommandContextType.BotDM,
+                        ApplicationCommandContextType.Guild,
+                        ApplicationCommandContextType.PrivateChannel
+                    }
                 };
 
                 if (arg is SlashCommandProperties slashProps)
@@ -193,7 +215,18 @@ namespace Discord.Rest
                     // TODO: better conversion to nullable optionals
                     DefaultMemberPermission = arg.DefaultMemberPermissions.ToNullable(),
                     DmPermission = arg.IsDMEnabled.ToNullable(),
-                    Nsfw = arg.IsNsfw.GetValueOrDefault(false)
+                    Nsfw = arg.IsNsfw.GetValueOrDefault(false),
+                    IntegrationTypes = new[]
+                    {
+                        ApplicationIntegrationType.GuildInstall,
+                        ApplicationIntegrationType.UserInstall
+                    },
+                    Contexts = new[]
+                    {
+                        ApplicationCommandContextType.BotDM,
+                        ApplicationCommandContextType.Guild,
+                        ApplicationCommandContextType.PrivateChannel
+                    }
                 };
 
                 if (arg is SlashCommandProperties slashProps)

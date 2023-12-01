@@ -72,7 +72,9 @@ namespace Discord.Interactions
                 if (context.Channel is IGuildChannel guildChannel)
                     perms = guildUser.GetPermissions(guildChannel);
                 else
+                {
                     perms = ChannelPermissions.All(context.Channel);
+                }
 
                 if (!perms.Has(ChannelPermission.Value))
                     return PreconditionResult.FromError(ErrorMessage ?? $"Bot requires channel permission {ChannelPermission.Value}.");

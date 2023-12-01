@@ -1416,6 +1416,19 @@ namespace Discord.API
         {
             options = RequestOptions.CreateOrClone(options);
 
+            //foreach (var command in commands)
+            //{
+            //    command.IntegrationTypes = new[]
+            //    {
+            //        ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall
+            //    };
+            //    command.Contexts = new[]
+            //    {
+            //        ApplicationCommandContextType.BotDM, ApplicationCommandContextType.PrivateChannel,
+            //        ApplicationCommandContextType.Guild
+            //    };
+            //}
+            
             var bucket = new BucketIds(guildId: guildId);
 
             return await SendJsonAsync<ApplicationCommand[]>("PUT", () => $"applications/{CurrentApplicationId}/guilds/{guildId}/commands", commands, bucket, options: options).ConfigureAwait(false);
