@@ -88,8 +88,11 @@ namespace Discord.WebSocket
         public Task ModifyAsync(Action<VoiceChannelProperties> func, RequestOptions options = null)
             => ChannelHelper.ModifyAsync(this, Discord, func, options);
 
+        public Task<IAudioClient> ConnectAsync(bool selfDeaf = false, bool selfMute = false, bool external = false)
+            => Guild.ConnectAudioAsync(Id, selfDeaf, selfMute, external, true);
+
         /// <inheritdoc />
-        public Task<IAudioClient> ConnectAsync(bool selfDeaf = false, bool selfMute = false, bool external = false, bool disconnect = true)
+        public Task<IAudioClient> ConnectAsync(bool selfDeaf, bool selfMute, bool external, bool disconnect)
             => Guild.ConnectAudioAsync(Id, selfDeaf, selfMute, external, disconnect);
 
         /// <inheritdoc />
@@ -99,7 +102,7 @@ namespace Discord.WebSocket
         /// <inheritdoc />
         public Task ModifyAsync(Action<AudioChannelProperties> func, RequestOptions options = null)
             => Guild.ModifyAudioAsync(Id, func, options);
-        
+
 
         /// <inheritdoc />
         public override SocketGuildUser GetUser(ulong id)
