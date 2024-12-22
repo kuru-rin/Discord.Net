@@ -55,6 +55,14 @@ namespace Discord
             return $"{DiscordConfig.CDNUrl}guilds/{guildId}/users/{userId}/avatars/{avatarId}.{extension}?size={size}";
         }
 
+        public static string GetGuildUserBannerUrl(ulong userId, ulong guildId, string bannerId, ushort size, ImageFormat format)
+        {
+            if (bannerId == null)
+                return null;
+            var extension = FormatToExtension(format, bannerId);
+            return $"{DiscordConfig.CDNUrl}guilds/{guildId}/users/{userId}/banners/{bannerId}.{extension}?size={size}";
+        }
+
         /// <summary>
         ///     Returns a user banner URL.
         /// </summary>
@@ -103,11 +111,17 @@ namespace Discord
         /// <param name="guildId">The guild snowflake identifier.</param>
         /// <param name="iconId">The icon identifier.</param>
         /// <param name="size">The size of the image to return in horizontal pixels. This can be any power of two between 16 and 2048.</param>
+        /// <param name="format">The format to return.</param>
         /// <returns>
         ///     A URL pointing to the guild's icon.
         /// </returns>
-        public static string GetGuildIconUrl(ulong guildId, string iconId, ushort size = 2048)
-            => iconId != null ? $"{DiscordConfig.CDNUrl}icons/{guildId}/{iconId}.jpg?size={size}" : null;
+        public static string GetGuildIconUrl(ulong guildId, string iconId, ushort size = 2048, ImageFormat format = ImageFormat.Auto)
+        {
+            if (iconId == null)
+                return null;
+            string extension = FormatToExtension(format, iconId);
+            return $"{DiscordConfig.CDNUrl}icons/{guildId}/{iconId}.{extension}?size={size}";
+        }
         /// <summary>
         ///     Returns a guild role's icon URL.
         /// </summary>

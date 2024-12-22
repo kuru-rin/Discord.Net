@@ -50,6 +50,9 @@ namespace Discord.WebSocket
         /// <inheritdoc />
         public override string GlobalName { get { return GlobalUser.GlobalName; } internal set { GlobalUser.GlobalName = value; } }
 
+        /// <inheritdoc/>
+        public string GuildBannerHash { get; private set; }
+
         /// <inheritdoc />
         public GuildPermissions GuildPermissions => new GuildPermissions(Permissions.ResolveGuild(Guild, this));
         internal override SocketPresence Presence { get; set; }
@@ -149,7 +152,7 @@ namespace Discord.WebSocket
         {
             var entity = new SocketGuildUser(guild, guild.Discord.GetOrCreateUser(state, model));
             entity.Update(state, model);
-            entity.UpdateRoles(new ulong[0]);
+            entity.UpdateRoles([]);
             return entity;
         }
         internal static SocketGuildUser Create(SocketGuild guild, ClientState state, MemberModel model)
@@ -157,7 +160,7 @@ namespace Discord.WebSocket
             var entity = new SocketGuildUser(guild, guild.Discord.GetOrCreateUser(state, model.User));
             entity.Update(state, model);
             if (!model.Roles.IsSpecified)
-                entity.UpdateRoles(new ulong[0]);
+                entity.UpdateRoles([]);
             return entity;
         }
         internal static SocketGuildUser Create(SocketGuild guild, ClientState state, PresenceModel model)
@@ -165,7 +168,7 @@ namespace Discord.WebSocket
             var entity = new SocketGuildUser(guild, guild.Discord.GetOrCreateUser(state, model.User));
             entity.Update(state, model, false);
             if (!model.Roles.IsSpecified)
-                entity.UpdateRoles(new ulong[0]);
+                entity.UpdateRoles([]);
             return entity;
         }
         internal void Update(ClientState state, MemberModel model)
@@ -185,6 +188,8 @@ namespace Discord.WebSocket
                 _timedOutTicks = model.TimedOutUntil.Value?.UtcTicks;
             if (model.Pending.IsSpecified)
                 IsPending = model.Pending.Value;
+            if (model.Banner.IsSpecified)
+                GuildBannerHash = model.Banner.Value;
 
             Flags = model.Flags;
         }
@@ -262,6 +267,10 @@ namespace Discord.WebSocket
         /// <inheritdoc />
         public string GetGuildAvatarUrl(ImageFormat format = ImageFormat.Auto, ushort size = 128)
             => CDN.GetGuildUserAvatarUrl(Id, Guild.Id, GuildAvatarId, size, format);
+
+        /// <inheritdoc />
+        public string GetGuildBannerUrl(ImageFormat format = ImageFormat.Auto, ushort size = 128)
+            => CDN.GetGuildUserBannerUrl(Id, Guild.Id, GuildBannerHash, size, format);
 
         /// <inheritdoc />
         public override string GetDisplayAvatarUrl(ImageFormat format = ImageFormat.Auto, ushort size = 128)

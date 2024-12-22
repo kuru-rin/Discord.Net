@@ -790,6 +790,17 @@ namespace Discord.API
             var ids = new BucketIds(guildId: guildId);
             return SendAsync("DELETE", () => $"guilds/{guildId}/members/{userId}/roles/{roleId}", ids, options: options);
         }
+
+        public Task<API.Role> GetRoleAsync(ulong guildId, ulong roleId, RequestOptions options = null)
+        {
+            Preconditions.NotEqual(guildId, 0, nameof(guildId));
+            Preconditions.NotEqual(roleId, 0, nameof(roleId));
+            options = RequestOptions.CreateOrClone(options);
+
+            var ids = new BucketIds(guildId: guildId);
+            return SendAsync<API.Role>("GET", () => $"guilds/{guildId}/roles/{roleId}", ids, options: options);
+        }
+
         #endregion
 
         #region Channel Messages
@@ -1513,9 +1524,6 @@ namespace Discord.API
                 throw new ArgumentException("At least one of 'Content', 'Embeds', 'File' or 'Components' must be specified.", nameof(args));
             }
 
-            if (args.Content.IsSpecified && args.Content.Value is not null && args.Content.Value.Length > DiscordConfig.MaxMessageSize)
-                throw new ArgumentException(message: $"Message content is too long, length must be less or equal to {DiscordConfig.MaxMessageSize}.", paramName: nameof(args.Content));
-
             if (args.Content.IsSpecified && args.Content.Value?.Length > DiscordConfig.MaxMessageSize)
                 throw new ArgumentException(message: $"Message content is too long, length must be less or equal to {DiscordConfig.MaxMessageSize}.", paramName: nameof(args.Content));
 
@@ -2038,6 +2046,16 @@ namespace Discord.API
             Expression<Func<string>> endpoint = () => $"guilds/{guildId}/members/search?limit={limit}&query={query}";
             return SendAsync<IReadOnlyCollection<GuildMember>>("GET", endpoint, ids, options: options);
         }
+
+        public Task<GuildMemberSearchResponse> SearchGuildMembersAsyncV2(ulong guildId, SearchGuildMembersParamsV2 args, RequestOptions options = null)
+        {
+            Preconditions.NotEqual(guildId, 0, nameof(guildId));
+            options = RequestOptions.CreateOrClone(options);
+            
+            var ids = new BucketIds(guildId: guildId);
+            return SendJsonAsync<GuildMemberSearchResponse>("POST", () => $"guilds/{guildId}/members-search", args, ids, options: options);
+        }
+
         #endregion
 
         #region Guild Roles
@@ -2093,7 +2111,7 @@ namespace Discord.API
         }
         #endregion
 
-        #region Guild emoji
+        #region Guild Emoji
         public Task<IReadOnlyCollection<Emoji>> GetGuildEmotesAsync(ulong guildId, RequestOptions options = null)
         {
             Preconditions.NotEqual(guildId, 0, nameof(guildId));
@@ -2837,6 +2855,24 @@ namespace Discord.API
         public Task ConsumeEntitlementAsync(ulong entitlementId, RequestOptions options = null)
             => SendAsync("POST", () => $"applications/{CurrentApplicationId}/entitlements/{entitlementId}/consume", new BucketIds(), options: options);
 
+        public Task<Subscription> GetSKUSubscriptionAsync(ulong skuId, ulong subscriptionId, RequestOptions options = null)
+            => SendAsync<Subscription>("GET", () => $"skus/{skuId}/subscriptions/{subscriptionId}", new BucketIds(), options: options);
+
+        public Task<Subscription[]> ListSKUSubscriptionsAsync(ulong skuId, ulong? before = null, ulong? after = null, int limit = 100, ulong? userId = null, RequestOptions options = null)
+        {
+            Preconditions.AtMost(100, limit, "Limit must be less or equal to 100.");
+            Preconditions.AtLeast(1, limit, "Limit must be greater or equal to 1.");
+
+            var args = $"?limit={limit}";
+            if (before is not null)
+                args += $"&before={before}";
+            if (after is not null)
+                args += $"&after={after}";
+            if (userId is not null)
+                args += $"&user_id={userId}";
+
+            return SendAsync<Subscription[]>("GET", () => $"skus/{skuId}/subscriptions{args}", new BucketIds(), options: options);
+        }
         #endregion
 
         #region Polls
@@ -2849,6 +2885,57 @@ namespace Discord.API
 
         public Task<Message> ExpirePollAsync(ulong channelId, ulong messageId, RequestOptions options = null)
             => SendAsync<Message>("POST", () => $"channels/{channelId}/polls/{messageId}/expire", new BucketIds(channelId: channelId), options: options);
+
+        #endregion
+
+        #region App Emojis
+
+        public Task<Emoji> CreateApplicationEmoteAsync(CreateApplicationEmoteParams args, RequestOptions options = null)
+        {
+            Preconditions.NotNull(args, nameof(args));
+            Preconditions.NotNullOrWhitespace(args.Name, nameof(args.Name));
+            Preconditions.NotNull(args.Image.Stream, nameof(args.Image));
+            options = RequestOptions.CreateOrClone(options);
+
+            var ids = new BucketIds();
+            return SendJsonAsync<Emoji>("POST", () => $"applications/{CurrentApplicationId}/emojis", args, ids, options: options);
+        }
+
+        public Task<Emoji> ModifyApplicationEmoteAsync(ulong emoteId, ModifyApplicationEmoteParams args, RequestOptions options = null)
+        {
+            Preconditions.NotEqual(emoteId, 0, nameof(emoteId));
+            Preconditions.NotNull(args, nameof(args));
+            options = RequestOptions.CreateOrClone(options);
+
+            var ids = new BucketIds();
+            return SendJsonAsync<Emoji>("PATCH", () => $"applications/{CurrentApplicationId}/emojis/{emoteId}", args, ids, options: options);
+        }
+
+        public Task DeleteApplicationEmoteAsync(ulong emoteId, RequestOptions options = null)
+        {
+            Preconditions.NotEqual(emoteId, 0, nameof(emoteId));
+            options = RequestOptions.CreateOrClone(options);
+
+            var ids = new BucketIds();
+            return SendAsync("DELETE", () => $"applications/{CurrentApplicationId}/emojis/{emoteId}", ids, options: options);
+        }
+
+        public Task<Emoji> GetApplicationEmoteAsync(ulong emoteId, RequestOptions options = null)
+        {
+            Preconditions.NotEqual(emoteId, 0, nameof(emoteId));
+            options = RequestOptions.CreateOrClone(options);
+
+            var ids = new BucketIds();
+            return SendAsync<Emoji>("GET", () => $"applications/{CurrentApplicationId}/emojis/{emoteId}", ids, options: options);
+        }
+
+        public Task<ListApplicationEmojisResponse> GetApplicationEmotesAsync(RequestOptions options = null)
+        {
+            options = RequestOptions.CreateOrClone(options);
+
+            var ids = new BucketIds();
+            return SendAsync<ListApplicationEmojisResponse>("GET", () => $"applications/{CurrentApplicationId}/emojis", ids, options: options);
+        }
 
         #endregion
     }
