@@ -100,7 +100,7 @@ jobs:
           run: echo "Suffix=-${REF_NAME##*/}" >> $GITHUB_ENV
 
         - name: Generate Suffix
-          if: env.IsTagBuild == 'true'
+          if: env.IsTagBuild != 'true'
           run: echo "Suffix=-nightly.$(date +'%Y%m%d').${{ github.run_number }}" >> $GITHUB_ENV
           
         - name: setup NuGet
