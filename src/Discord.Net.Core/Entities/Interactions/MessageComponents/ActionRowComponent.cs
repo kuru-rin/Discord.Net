@@ -26,9 +26,10 @@ public class ActionRowComponent : IMessageComponent
 
     internal ActionRowComponent() { }
 
-    internal ActionRowComponent(IReadOnlyCollection<IMessageComponent> components)
+    internal ActionRowComponent(IReadOnlyCollection<IMessageComponent> components, int? id)
     {
         Components = components;
+        Id = id;
     }
 
     /// <inheritdoc />
