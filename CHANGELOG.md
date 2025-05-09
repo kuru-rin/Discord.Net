@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.18.0-beta.2] - 2025-05-09
+
+### Added
+- #3119 Add component => builder converters (b729380)
+- #3120 use `Color` for container `AccentColor` & fix action row validation (c888c84)
+- #3122 Fix `Id`s in `ActionRowComponent` and `SelectmenuComponent` (57cdec7)
+- #3123 Component search fixes & improvements (be8e6e0)
+
+### Fixed
+- #3121 fix & improve `ToBuilder` methods (4ab96c7)
+
+### Misc
+- #3108 Ensure the required gateway intent is available when connected to audio (f1ff191)
+
+
 ## [3.18.0-beta.1] - 2025-05-08
 
 ### Added
