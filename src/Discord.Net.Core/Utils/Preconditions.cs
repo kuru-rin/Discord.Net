@@ -98,7 +98,7 @@ namespace Discord
         }
 
         public static void MessageAtLeastOneOf(string text = null, MessageComponent components = null, ICollection<IEmbed> embeds = null,
-                    ICollection<ISticker> stickers = null, IEnumerable<FileAttachment> attachments = null, PollProperties poll = null)
+                    ICollection<ISticker> stickers = null, IEnumerable<FileAttachment> attachments = null, PollProperties poll = null, MessageReference messageReference = null)
         {
             if (!string.IsNullOrEmpty(text))
                 return;
@@ -116,6 +116,9 @@ namespace Discord
                 return;
 
             if (poll is not null)
+                return;
+
+            if (messageReference?.ReferenceType.GetValueOrDefault(MessageReferenceType.Default) is MessageReferenceType.Forward)
                 return;
 
             throw new ArgumentException($"At least one of 'Content', 'Embeds', 'Components', 'Stickers', 'Attachments' or 'Poll' must be specified.");
@@ -398,5 +401,15 @@ namespace Discord
         }
 
         #endregion
+
+        public static void ValidateMessageFlags(MessageFlags flags)
+        {
+            if (!flags.HasFlag(MessageFlags.None) &&
+                !flags.HasFlag(MessageFlags.SuppressEmbeds) &&
+                !flags.HasFlag(MessageFlags.SuppressNotification) &&
+                !flags.HasFlag(MessageFlags.ComponentsV2) &&
+                !flags.HasFlag(MessageFlags.Ephemeral))
+                throw new ArgumentException("The only valid MessageFlags are Ephemeral, SuppressEmbeds, SuppressNotification, ComponentsV2 and None.", nameof(flags));
+        }
     }
 }

@@ -284,7 +284,7 @@ namespace Discord.Rest
             Preconditions.AtMost(allowedMentions?.UserIds?.Count ?? 0, 100, nameof(allowedMentions.UserIds), "A max of 100 user Ids are allowed.");
             Preconditions.AtMost(embeds.Length, DiscordConfig.MaxEmbedsPerMessage, nameof(embeds), $"A max of {DiscordConfig.MaxEmbedsPerMessage} Embeds are allowed.");
 
-            Preconditions.MessageAtLeastOneOf(text, components, embeds, stickers, poll: poll);
+            Preconditions.MessageAtLeastOneOf(text, components, embeds, stickers, poll: poll, messageReference: messageReference);
             Preconditions.ValidatePoll(poll);
 
             // check that user flag and user Id list are exclusive, same with role flag and role Id list
@@ -308,10 +308,10 @@ namespace Discord.Rest
                 Preconditions.AtMost(stickers.Length, 3, nameof(stickers), "A max of 3 stickers are allowed.");
             }
 
-            if (flags is not MessageFlags.None and not MessageFlags.SuppressEmbeds and not MessageFlags.SuppressNotification)
-                throw new ArgumentException("The only valid MessageFlags are SuppressEmbeds, SuppressNotification and none.", nameof(flags));
+            if (components?.Components?.Any(x => x.Type != ComponentType.ActionRow) ?? false)
+                flags |= MessageFlags.ComponentsV2;
 
-            
+            Preconditions.ValidateMessageFlags(flags);
 
             var args = new CreateMessageParams
             {
@@ -320,7 +320,7 @@ namespace Discord.Rest
                 Embeds = embeds.Any() ? embeds.Select(x => x.ToModel()).ToArray() : Optional<API.Embed[]>.Unspecified,
                 AllowedMentions = allowedMentions?.ToModel(),
                 MessageReference = messageReference?.ToModel(),
-                Components = components?.Components.Select(x => new API.ActionRowComponent(x)).ToArray() ?? Optional<API.ActionRowComponent[]>.Unspecified,
+                Components = components?.Components.Select(x => x.ToModel()).ToArray() ?? Optional<IMessageComponent[]>.Unspecified,
                 Stickers = stickers?.Any() ?? false ? stickers.Select(x => x.Id).ToArray() : Optional<ulong[]>.Unspecified,
                 Flags = flags,
                 Poll = poll?.ToModel() ?? Optional<CreatePollParams>.Unspecified
@@ -400,22 +400,17 @@ namespace Discord.Rest
             Preconditions.AtMost(allowedMentions?.UserIds?.Count ?? 0, 100, nameof(allowedMentions.UserIds), "A max of 100 user Ids are allowed.");
             Preconditions.AtMost(embeds.Length, DiscordConfig.MaxEmbedsPerMessage, nameof(embeds), $"A max of {DiscordConfig.MaxEmbedsPerMessage} Embeds are allowed.");
 
-            Preconditions.MessageAtLeastOneOf(text, components, embeds, stickers, attachments, poll);
+            Preconditions.MessageAtLeastOneOf(text, components, embeds, stickers, attachments, poll, messageReference);
             Preconditions.ValidatePoll(poll);
 
             foreach (var attachment in attachments)
             {
                 Preconditions.NotNullOrEmpty(attachment.FileName, nameof(attachment.FileName), "File Name must not be empty or null");
-            }
 
-            if (channel is ITextChannel guildTextChannel)
-            {
-                ulong contentSize = (ulong)attachments.Where(x => x.Stream.CanSeek).Sum(x => x.Stream.Length);
-
-                if (contentSize > guildTextChannel.Guild.MaxUploadLimit)
-                {
-                    throw new ArgumentOutOfRangeException(nameof(attachments), $"Collective file size exceeds the max file size of {guildTextChannel.Guild.MaxUploadLimit} bytes in that guild!");
-                }
+                if (channel is ITextChannel guildTextChannel &&
+                    attachment.Stream.CanSeek &&
+                    (ulong)attachment.Stream.Length > guildTextChannel.Guild.MaxUploadLimit)
+                    throw new ArgumentOutOfRangeException(nameof(attachments), $"File size exceeds the max file size of {guildTextChannel.Guild.MaxUploadLimit} bytes in that guild!");
             }
 
             // check that user flag and user Id list are exclusive, same with role flag and role Id list
@@ -434,8 +429,10 @@ namespace Discord.Rest
                 }
             }
 
-            if (flags is not MessageFlags.None and not MessageFlags.SuppressEmbeds and not MessageFlags.SuppressNotification)
-                throw new ArgumentException("The only valid MessageFlags are SuppressEmbeds, SuppressNotification and none.", nameof(flags));
+            if (components?.Components?.Any(x => x.Type != ComponentType.ActionRow) ?? false)
+                flags |= MessageFlags.ComponentsV2;
+
+            Preconditions.ValidateMessageFlags(flags);
 
             if (stickers != null)
             {
@@ -449,7 +446,7 @@ namespace Discord.Rest
                 Embeds = embeds.Any() ? embeds.Select(x => x.ToModel()).ToArray() : Optional<API.Embed[]>.Unspecified,
                 AllowedMentions = allowedMentions?.ToModel() ?? Optional<API.AllowedMentions>.Unspecified,
                 MessageReference = messageReference?.ToModel() ?? Optional<API.MessageReference>.Unspecified,
-                MessageComponent = components?.Components.Select(x => new API.ActionRowComponent(x)).ToArray() ?? Optional<API.ActionRowComponent[]>.Unspecified,
+                MessageComponent = components?.Components.Select(x => x.ToModel()).ToArray() ?? Optional<IMessageComponent[]>.Unspecified,
                 Stickers = stickers?.Any() ?? false ? stickers.Select(x => x.Id).ToArray() : Optional<ulong[]>.Unspecified,
                 Flags = flags,
                 Poll = poll?.ToModel() ?? Optional<CreatePollParams>.Unspecified

@@ -6,8 +6,10 @@ namespace Discord;
 /// <summary>
 ///     Represents a builder for creating a <see cref="TextInputComponent"/>.
 /// </summary>
-public class TextInputBuilder
+public class TextInputBuilder : IInteractableComponentBuilder
 {
+    public ComponentType Type => ComponentType.TextInput;
+
     /// <summary>
     ///     The max length of a <see cref="TextInputComponent.Placeholder"/>.
     /// </summary>
@@ -22,12 +24,16 @@ public class TextInputBuilder
     public string CustomId
     {
         get => _customId;
-        set => _customId = value?.Length switch
+        set
         {
-            > ComponentBuilder.MaxCustomIdLength => throw new ArgumentOutOfRangeException(nameof(value), $"Custom Id length must be less or equal to {ComponentBuilder.MaxCustomIdLength}."),
-            0 => throw new ArgumentOutOfRangeException(nameof(value), "Custom Id length must be at least 1."),
-            _ => value
-        };
+            if (value is not null)
+            {
+                Preconditions.AtLeast(value.Length, 1, nameof(CustomId));
+                Preconditions.AtMost(value.Length, ComponentBuilder.MaxCustomIdLength, nameof(CustomId));
+            }
+
+            _customId = value;
+        }
     }
 
     /// <summary>
@@ -49,7 +55,7 @@ public class TextInputBuilder
         get => _placeholder;
         set => _placeholder = (value?.Length ?? 0) <= MaxPlaceholderLength
             ? value
-            : throw new ArgumentException($"Placeholder cannot have more than {MaxPlaceholderLength} characters.");
+            : throw new ArgumentException($"Placeholder cannot have more than {MaxPlaceholderLength} characters. Value: \"{value}\"");
     }
 
     /// <summary>
@@ -99,6 +105,8 @@ public class TextInputBuilder
     /// </summary>
     public bool? Required { get; set; }
 
+    public int? Id { get; set; }
+
     /// <summary>
     ///     Gets or sets the default value of the text input.
     /// </summary>
@@ -115,9 +123,9 @@ public class TextInputBuilder
         set
         {
             if (value?.Length > (MaxLength ?? LargestMaxLength))
-                throw new ArgumentOutOfRangeException(nameof(value), $"Value must not be longer than {MaxLength ?? LargestMaxLength}.");
+                throw new ArgumentOutOfRangeException(nameof(value), $"Value must not be longer than {MaxLength ?? LargestMaxLength}. Value: \"{value}\"");
             if (value?.Length < (MinLength ?? 0))
-                throw new ArgumentOutOfRangeException(nameof(value), $"Value must not be shorter than {MinLength}");
+                throw new ArgumentOutOfRangeException(nameof(value), $"Value must not be shorter than {MinLength}. Value: \"{value}\"");
 
             _value = value;
         }
@@ -140,7 +148,7 @@ public class TextInputBuilder
     /// <param name="maxLength">The text input's maximum length.</param>
     /// <param name="required">The text input's required value.</param>
     public TextInputBuilder(string label, string customId, TextInputStyle style = TextInputStyle.Short, string placeholder = null,
-        int? minLength = null, int? maxLength = null, bool? required = null, string value = null)
+        int? minLength = null, int? maxLength = null, bool? required = null, string value = null, int? id = null)
     {
         Label = label;
         Style = style;
@@ -150,6 +158,7 @@ public class TextInputBuilder
         MaxLength = maxLength;
         Required = required;
         Value = value;
+        Id = id;
     }
 
     /// <summary>
@@ -158,6 +167,22 @@ public class TextInputBuilder
     public TextInputBuilder()
     {
 
+    }
+
+    /// <summary>
+    ///     Creates a new instance of a <see cref="TextInputBuilder"/> from existing component.
+    /// </summary>
+    public TextInputBuilder(TextInputComponent textInput)
+    {
+        Label = textInput.Label;
+        Style = textInput.Style;
+        CustomId = textInput.CustomId;
+        Placeholder = textInput.Placeholder;
+        MinLength = textInput.MinLength;
+        MaxLength = textInput.MaxLength;
+        Required = textInput.Required;
+        Value = textInput.Value;
+        Id = textInput.Id;
     }
 
     /// <summary>
@@ -257,6 +282,8 @@ public class TextInputBuilder
         if (Style is TextInputStyle.Short && Value?.Any(x => x == '\n') is true)
             throw new ArgumentException($"Value must not contain new line characters when style is {TextInputStyle.Short}.", nameof(Value));
 
-        return new TextInputComponent(CustomId, Label, Placeholder, MinLength, MaxLength, Style, Required, Value);
+        return new TextInputComponent(CustomId, Label, Placeholder, MinLength, MaxLength, Style, Required, Value, Id);
     }
+
+    IMessageComponent IMessageComponentBuilder.Build() => Build();
 }

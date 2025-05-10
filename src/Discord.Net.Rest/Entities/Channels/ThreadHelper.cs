@@ -163,7 +163,7 @@ namespace Discord.Rest
                     Content = text,
                     Embeds = embeds.Any() ? embeds.Select(x => x.ToModel()).ToArray() : Optional<API.Embed[]>.Unspecified,
                     Flags = flags,
-                    Components = components?.Components?.Any() ?? false ? components.Components.Select(x => new API.ActionRowComponent(x)).ToArray() : Optional<API.ActionRowComponent[]>.Unspecified,
+                    Components = components?.Components?.Any() ?? false ? components.Components.Select(x => x.ToModel()).ToArray() : Optional<IMessageComponent[]>.Unspecified,
                     Stickers = stickers?.Any() ?? false ? stickers.Select(x => x.Id).ToArray() : Optional<ulong[]>.Unspecified,
                 },
                 Tags = tagIds
@@ -213,7 +213,9 @@ namespace Discord.Rest
                 throw new ArgumentException("The only valid MessageFlags are SuppressEmbeds and none.", nameof(flags));
 
             if (channel.Flags.HasFlag(ChannelFlags.RequireTag))
-                throw new ArgumentException($"The channel {channel.Name} requires posts to have at least one tag.");
+            {
+                Preconditions.AtLeast(tagIds?.Length ?? 0, 1, nameof(tagIds), $"The channel {channel.Name} requires posts to have at least one tag.");
+            }
 
             var args = new CreateMultipartPostAsync(attachments.ToArray())
             {
@@ -222,7 +224,7 @@ namespace Discord.Rest
                 Content = text,
                 Embeds = embeds.Any() ? embeds.Select(x => x.ToModel()).ToArray() : Optional<API.Embed[]>.Unspecified,
                 Flags = flags,
-                MessageComponent = components?.Components?.Any() ?? false ? components.Components.Select(x => new API.ActionRowComponent(x)).ToArray() : Optional<API.ActionRowComponent[]>.Unspecified,
+                MessageComponent = components?.Components?.Any() ?? false ? components.Components.Select(x => x.ToModel()).ToArray() : Optional<IMessageComponent[]>.Unspecified,
                 Slowmode = slowmode,
                 Stickers = stickers?.Any() ?? false ? stickers.Select(x => x.Id).ToArray() : Optional<ulong[]>.Unspecified,
                 Title = title,

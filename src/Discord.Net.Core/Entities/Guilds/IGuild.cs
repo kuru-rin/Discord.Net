@@ -953,6 +953,17 @@ namespace Discord
         ///     A role that is associated with the specified <paramref name="id"/>; <see langword="null" /> if none is found.
         /// </returns>
         IRole GetRole(ulong id);
+
+        /// <summary>
+        ///     Gets a role in this guild.
+        /// </summary>
+        /// <param name="id">The snowflake identifier for the role.</param>
+        /// <returns>
+        ///     A task that represents the asynchronous creation operation. The task result contains the role
+        ///     that is associated with the specified <paramref name="id"/>; <see langword="null" /> if none is found.
+        /// </returns>
+        Task<IRole> GetRoleAsync(ulong id, RequestOptions options = null);
+
         /// <summary>
         ///     Creates a new role with the provided name.
         /// </summary>
@@ -1087,6 +1098,7 @@ namespace Discord
         ///     be or has been removed from this guild.
         /// </returns>
         Task<int> PruneUsersAsync(int days = 30, bool simulate = false, RequestOptions options = null, IEnumerable<ulong> includeRoleIds = null);
+
         /// <summary>
         ///     Gets a collection of users in this guild that the name or nickname starts with the
         ///     provided <see cref="string"/> at <paramref name="query"/>.
@@ -1103,6 +1115,11 @@ namespace Discord
         ///     users that the name or nickname starts with the provided <see cref="string"/> at <paramref name="query"/>.
         /// </returns>
         Task<IReadOnlyCollection<IGuildUser>> SearchUsersAsync(string query, int limit = DiscordConfig.MaxUsersPerBatch, CacheMode mode = CacheMode.AllowDownload, RequestOptions options = null);
+
+        /// <summary>
+        ///     Gets a collection of users in this guild that match the provided search criteria.
+        /// </summary>
+        Task<MemberSearchResult> SearchUsersAsyncV2(int limit = DiscordConfig.MaxUsersPerBatch, MemberSearchPropertiesV2 args = null, RequestOptions options = null);
 
         /// <summary>
         ///     Gets the specified number of audit log entries for this guild.

@@ -215,7 +215,7 @@ namespace Discord.WebSocket
             => (int)((guildId >> 22) % (uint)_totalShards);
         public int GetShardIdFor(IGuild guild)
             => GetShardIdFor(guild?.Id ?? 0);
-        private DiscordSocketClient GetShardFor(ulong guildId)
+        public DiscordSocketClient GetShardFor(ulong guildId)
             => GetShard(GetShardIdFor(guildId));
         public DiscordSocketClient GetShardFor(IGuild guild)
             => GetShardFor(guild?.Id ?? 0);
@@ -428,7 +428,7 @@ namespace Discord.WebSocket
                     //Should only happen if token is changed
                     var _ = LogoutAsync(); //Signal the logout, fire and forget
                 }
-                return Task.Delay(0);
+                return Task.CompletedTask;
             };
 
             client.SentRequest += (method, endpoint, millis) => _sentRequest.InvokeAsync(method, endpoint, millis);
@@ -516,9 +516,9 @@ namespace Discord.WebSocket
             client.GuildScheduledEventUserRemove += (arg1, arg2) => _guildScheduledEventUserRemove.InvokeAsync(arg1, arg2);
 
             client.AutoModActionExecuted += (guild, action, arg3) => _autoModActionExecuted.InvokeAsync(guild, action, arg3);
-            client.AutoModRuleCreated += rule => client._autoModRuleCreated.InvokeAsync(rule);
-            client.AutoModRuleDeleted += rule => client._autoModRuleDeleted.InvokeAsync(rule);
-            client.AutoModRuleUpdated += (arg1, arg2) => client._autoModRuleUpdated.InvokeAsync(arg1, arg2);
+            client.AutoModRuleCreated += rule => _autoModRuleCreated.InvokeAsync(rule);
+            client.AutoModRuleDeleted += rule => _autoModRuleDeleted.InvokeAsync(rule);
+            client.AutoModRuleUpdated += (arg1, arg2) => _autoModRuleUpdated.InvokeAsync(arg1, arg2);
 
             client.WebhooksUpdated += (arg1, arg2) => _webhooksUpdated.InvokeAsync(arg1, arg2);
             client.AuditLogCreated += (arg1, arg2) => _auditLogCreated.InvokeAsync(arg1, arg2);
@@ -611,7 +611,7 @@ namespace Discord.WebSocket
             => await CreateGuildAsync(name, region, jpegIcon).ConfigureAwait(false);
 
         /// <inheritdoc />
-        async Task<IUser> IDiscordClient.GetUserAsync(ulong id, CacheMode mode, RequestOptions options)
+        public async Task<IUser> GetUserAsync(ulong id, CacheMode mode, RequestOptions options)
         {
             var user = GetUser(id);
             if (user is not null || mode == CacheMode.CacheOnly)

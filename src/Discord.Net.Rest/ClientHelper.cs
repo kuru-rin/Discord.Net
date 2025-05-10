@@ -350,8 +350,8 @@ namespace Discord.Rest
                     Description = x.Description,
                     Key = x.Key,
                     Type = x.Type,
-                    NameLocalizations = x.NameLocalizations?.ToDictionary(),
-                    DescriptionLocalizations = x.DescriptionLocalizations?.ToDictionary()
+                    NameLocalizations = x.NameLocalizations?.ToDictionary(x => x.Key, y => y.Value),
+                    DescriptionLocalizations = x.DescriptionLocalizations?.ToDictionary(x => x.Key, y => y.Value)
                 }).ToArray()))
                 .Select(model
                     => new RoleConnectionMetadata(
@@ -413,7 +413,7 @@ namespace Discord.Rest
 
         public static IAsyncEnumerable<IReadOnlyCollection<RestEntitlement>> ListEntitlementsAsync(BaseDiscordClient client, int? limit = 100,
             ulong? afterId = null, ulong? beforeId = null, bool excludeEnded = false, ulong? guildId = null, ulong? userId = null,
-             ulong[] skuIds = null, RequestOptions options = null)
+             ulong[] skuIds = null, bool? excludeDeleted = null, RequestOptions options = null)
         {
             return new PagedAsyncEnumerable<RestEntitlement>(
                 DiscordConfig.MaxEntitlementsPerBatch,
@@ -427,6 +427,7 @@ namespace Discord.Rest
                         GuildId = guildId ?? Optional<ulong>.Unspecified,
                         UserId = userId ?? Optional<ulong>.Unspecified,
                         SkuIds = skuIds ?? Optional<ulong[]>.Unspecified,
+                        ExcludeDeleted = excludeDeleted ?? Optional<bool>.Unspecified
                     };
                     if (info.Position != null)
                         args.AfterId = info.Position.Value;
@@ -451,11 +452,88 @@ namespace Discord.Rest
         {
             var models = await client.ApiClient.ListSKUsAsync(options).ConfigureAwait(false);
 
-            return models.Select(x => new SKU(x.Id, x.Type, x.ApplicationId, x.Name, x.Slug)).ToImmutableArray();
+            return models.Select(x => new SKU(x.Id, x.Type, x.ApplicationId, x.Name, x.Slug, x.Flags)).ToImmutableArray();
         }
 
         public static Task ConsumeEntitlementAsync(BaseDiscordClient client, ulong entitlementId, RequestOptions options = null)
             => client.ApiClient.ConsumeEntitlementAsync(entitlementId, options);
+
+        public static async Task<RestSubscription> GetSKUSubscriptionAsync(BaseDiscordClient client, ulong skuId, ulong subscriptionId, RequestOptions options = null)
+        {
+            var model = await client.ApiClient.GetSKUSubscriptionAsync(skuId, subscriptionId, options);
+
+            return RestSubscription.Create(client, model);
+        }
+
+        public static IAsyncEnumerable<IReadOnlyCollection<RestSubscription>> ListSubscriptionsAsync(BaseDiscordClient client, ulong skuId, int limit = 100,
+            ulong? afterId = null, ulong? beforeId = null, ulong? userId = null, RequestOptions options = null)
+        {
+            return new PagedAsyncEnumerable<RestSubscription>(
+                DiscordConfig.MaxSubscriptionsPerBatch,
+                async (info, ct) =>
+                {
+                    var _afterId = afterId;
+                    if (info.Position != null)
+                        _afterId = info.Position.Value;
+                    var models = await client.ApiClient.ListSKUSubscriptionsAsync(skuId, beforeId, _afterId, limit, userId, options).ConfigureAwait(false);
+                    return models
+                        .Select(x => RestSubscription.Create(client, x))
+                        .ToImmutableArray();
+                },
+                nextPage: (info, lastPage) =>
+                {
+                    if (lastPage.Count != DiscordConfig.MaxSubscriptionsPerBatch)
+                        return false;
+                    info.Position = lastPage.Max(x => x.Id);
+                    return true;
+                },
+                start: afterId,
+                count: limit
+            );
+        }
+
+        #endregion
+
+        #region Application Emojis
+
+        public static async Task<IReadOnlyCollection<Emote>> GetApplicationEmojisAsync(BaseDiscordClient client, RequestOptions options = null)
+        {
+            var model = await client.ApiClient.GetApplicationEmotesAsync(options).ConfigureAwait(false);
+            return model.Items.Select(x => x.ToEmote(client)).ToImmutableArray();
+        }
+
+        public static async Task<Emote> GetApplicationEmojiAsync(BaseDiscordClient client, ulong emojiId, RequestOptions options = null)
+        {
+            var model = await client.ApiClient.GetApplicationEmoteAsync(emojiId, options).ConfigureAwait(false);
+            return model.ToEmote(client);
+        }
+
+        public static async Task<Emote> CreateApplicationEmojiAsync(BaseDiscordClient client, string name, Image image, RequestOptions options = null)
+        {
+            var model = await client.ApiClient.CreateApplicationEmoteAsync(new CreateApplicationEmoteParams
+            {
+                Name = name,
+                Image = image.ToModel()
+            }, options).ConfigureAwait(false);
+
+            return model.ToEmote(client);
+        }
+
+        public static async Task<Emote> ModifyApplicationEmojiAsync(BaseDiscordClient client, ulong emojiId, Action<ApplicationEmoteProperties> func, RequestOptions options = null)
+        {
+            var args = new ApplicationEmoteProperties();
+            func(args);
+
+            var model = await client.ApiClient.ModifyApplicationEmoteAsync(emojiId, new ModifyApplicationEmoteParams
+            {
+                Name = args.Name,
+            }, options).ConfigureAwait(false);
+
+            return model.ToEmote(client);
+        }
+
+        public static Task DeleteApplicationEmojiAsync(BaseDiscordClient client, ulong emojiId, RequestOptions options = null)
+            => client.ApiClient.DeleteApplicationEmoteAsync(emojiId, options);
 
         #endregion
     }

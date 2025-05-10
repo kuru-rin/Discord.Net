@@ -644,6 +644,13 @@ namespace Discord.Rest
 
             return RestRole.Create(client, guild, model);
         }
+
+        public static async Task<RestRole> GetRoleAsync(IGuild guild, BaseDiscordClient client, ulong roleId, RequestOptions options)
+        {
+            var model = await client.ApiClient.GetRoleAsync(guild.Id, roleId, options).ConfigureAwait(false);
+            return model is null ? null : RestRole.Create(client, guild, model);
+        }
+
         #endregion
 
         #region Users
@@ -763,6 +770,35 @@ namespace Discord.Rest
             var models = await client.ApiClient.SearchGuildMembersAsync(guild.Id, apiArgs, options).ConfigureAwait(false);
             return models.Select(x => RestGuildUser.Create(client, guild, x)).ToImmutableArray();
         }
+
+        public static async Task<MemberSearchResult> SearchUsersAsyncV2(IGuild guild, BaseDiscordClient client, int limit, MemberSearchPropertiesV2 args,
+            RequestOptions options)
+        {
+            var apiArgs = new SearchGuildMembersParamsV2
+            {
+                Limit = limit,
+                After = args?.After?.ToModel() ?? Optional<API.Rest.MemberSearchPaginationFilter>.Unspecified,
+                Before = args?.Before?.ToModel() ?? Optional<API.Rest.MemberSearchPaginationFilter>.Unspecified,
+                Sort = args?.Sort ?? Optional<MemberSearchV2SortType>.Unspecified,
+                OrQuery = args?.OrQuery?.ToModel() ?? Optional<API.Rest.MemberSearchFilter>.Unspecified,
+                AndQuery = args?.AndQuery?.ToModel() ?? Optional<API.Rest.MemberSearchFilter>.Unspecified
+            };
+            var model = await client.ApiClient.SearchGuildMembersAsyncV2(guild.Id, apiArgs, options);
+
+            return new MemberSearchResult(
+                model.GuildId,
+                model.Members.Select(x =>
+                    new MemberSearchData(
+                        RestGuildUser.Create(client, guild, x.Member),
+                        x.InviteCode,
+                        x.JoinSourceType,
+                        x.InviterId)
+                ).ToImmutableArray(),
+                model.PageResultCount,
+                model.TotalResultCount
+                );
+        }
+
         #endregion
 
         #region Audit logs
@@ -1080,6 +1116,55 @@ namespace Discord.Rest
                 }
             }
 
+            if (args.RecurrenceRule is { IsSpecified: true, Value: not null })
+            {
+                var rule = args.RecurrenceRule.Value;
+
+                var hasByWeekDay = rule.ByWeekday?.Any() ?? false;
+                var hasByNWeekDay = rule.ByNWeekday?.Any() ?? false;
+                var hasByMonth = (rule.ByMonthDay?.Any() ?? false) || (rule.ByMonth?.Any() ?? false);
+
+                if (hasByWeekDay && hasByNWeekDay ||
+                    hasByWeekDay && hasByMonth ||
+                    hasByNWeekDay && hasByMonth)
+                {
+                    throw new ArgumentException($"A recurrence rule can have one of ('{nameof(rule.ByWeekday)}', '{nameof(rule.ByNWeekday)}', '{nameof(rule.ByMonth)}' + '{nameof(rule.ByMonthDay)}'), but not a combination of them.");
+                }
+
+                if (hasByWeekDay)
+                {
+                    if (rule.Frequency is not RecurrenceFrequency.Daily and not RecurrenceFrequency.Weekly)
+                        throw new ArgumentException($"A {nameof(rule.ByWeekday)} rule can only be used with {nameof(rule.Frequency)} of 'Daily' or 'Weekly'.");
+
+                    if (rule.Frequency is RecurrenceFrequency.Weekly)
+                    {
+                        if (rule.ByWeekday.Count != 1)
+                            throw new ArgumentException("A 'Weekly' recurrence rule must have a single weekday selected.");
+
+                        if (rule.Interval == 1)
+                            throw new ArgumentException($"{nameof(rule.Interval)} can only be set to a value other than '1' when {nameof(rule.Frequency)} is set to 'Weekly'");
+                    }
+                }
+
+                if (hasByNWeekDay)
+                {
+                    if (rule.Frequency is not RecurrenceFrequency.Monthly)
+                        throw new ArgumentException($"A {rule.ByNWeekday} rule must have {nameof(rule.Frequency)} set to 'Monthly'.");
+
+                    if (rule.ByNWeekday.Count != 1)
+                        throw new ArgumentException($"A {rule.ByNWeekday} must have exactly one day selected.");
+                }
+
+                if (hasByMonth)
+                {
+                    if (rule.Frequency is not RecurrenceFrequency.Yearly)
+                        throw new ArgumentException($"A {rule.ByMonth} rule must have {nameof(rule.Frequency)} set to 'Yearly'.");
+
+                    if (rule.ByMonth?.Count is not 1 || rule.ByMonthDay?.Count is not 1)
+                        throw new ArgumentException($"A {rule.ByMonth} rule must have exactly 1 day and 1 month selected.");
+                }
+            }
+
             var apiArgs = new ModifyGuildScheduledEventParams()
             {
                 ChannelId = args.ChannelId,
@@ -1091,10 +1176,11 @@ namespace Discord.Rest
                 Status = args.Status,
                 Type = args.Type,
                 Image = args.CoverImage.IsSpecified
-                    ? args.CoverImage.Value.HasValue
-                        ? args.CoverImage.Value.Value.ToModel()
-                        : null
-                    : Optional<ImageModel?>.Unspecified
+                    ? args.CoverImage.Value?.ToModel()
+                    : Optional<ImageModel?>.Unspecified,
+                RecurrenceRule = args.RecurrenceRule.IsSpecified
+                    ? args.RecurrenceRule.Value?.ToModel()
+                    : Optional<API.GuildScheduledEventRecurrenceRule>.Unspecified
             };
 
             if (args.Location.IsSpecified)
@@ -1135,7 +1221,8 @@ namespace Discord.Rest
             ulong? channelId = null,
             string location = null,
             Image? bannerImage = null,
-            RequestOptions options = null)
+            RequestOptions options = null,
+            GuildScheduledEventRecurrenceRuleProperties recurrenceRule = null)
         {
             if (location != null)
             {
@@ -1160,6 +1247,53 @@ namespace Discord.Rest
             if (endTime != null && endTime <= startTime)
                 throw new ArgumentOutOfRangeException(nameof(endTime), $"{nameof(endTime)} cannot be before the start time");
 
+            if (recurrenceRule is not null)
+            {
+                var hasByWeekDay = recurrenceRule.ByWeekday?.Any() ?? false;
+                var hasByNWeekDay = recurrenceRule.ByNWeekday?.Any() ?? false;
+                var hasByMonth = (recurrenceRule.ByMonthDay?.Any() ?? false) || (recurrenceRule.ByMonth?.Any() ?? false);
+
+                if (hasByWeekDay && hasByNWeekDay ||
+                    hasByWeekDay && hasByMonth ||
+                    hasByNWeekDay && hasByMonth)
+                {
+                    throw new ArgumentException($"A recurrence rule can have one of ('{nameof(recurrenceRule.ByWeekday)}', '{nameof(recurrenceRule.ByNWeekday)}', '{nameof(recurrenceRule.ByMonth)}' + '{nameof(recurrenceRule.ByMonthDay)}'), but not a combination of them.");
+                }
+
+                if (hasByWeekDay)
+                {
+                    if (recurrenceRule.Frequency is not RecurrenceFrequency.Daily and not RecurrenceFrequency.Weekly)
+                        throw new ArgumentException($"A {nameof(recurrenceRule.ByWeekday)} rule can only be used with {nameof(recurrenceRule.Frequency)} of 'Daily' or 'Weekly'.");
+
+                    if (recurrenceRule.Frequency is RecurrenceFrequency.Weekly)
+                    {
+                        if (recurrenceRule.ByWeekday.Count != 1)
+                            throw new ArgumentException("A 'Weekly' recurrence rule must have a single weekday selected.");
+
+                        if (recurrenceRule.Interval == 1)
+                            throw new ArgumentException($"{nameof(recurrenceRule.Interval)} can only be set to a value other than '1' when {nameof(recurrenceRule.Frequency)} is set to 'Weekly'");
+                    }
+                }
+
+                if (hasByNWeekDay)
+                {
+                    if (recurrenceRule.Frequency is not RecurrenceFrequency.Monthly)
+                        throw new ArgumentException($"A {recurrenceRule.ByNWeekday} rule must have {nameof(recurrenceRule.Frequency)} set to 'Monthly'.");
+
+                    if (recurrenceRule.ByNWeekday.Count != 1)
+                        throw new ArgumentException($"A {recurrenceRule.ByNWeekday} must have exactly one day selected.");
+                }
+
+                if (hasByMonth)
+                {
+                    if (recurrenceRule.Frequency is not RecurrenceFrequency.Yearly)
+                        throw new ArgumentException($"A {recurrenceRule.ByMonth} rule must have {nameof(recurrenceRule.Frequency)} set to 'Yearly'.");
+
+                    if (recurrenceRule.ByMonth?.Count is not 1 || recurrenceRule.ByMonthDay?.Count is not 1)
+                        throw new ArgumentException($"A {recurrenceRule.ByMonth} rule must have exactly 1 day and 1 month selected.");
+                }
+            }
+
 
             var apiArgs = new CreateGuildScheduledEventParams()
             {
@@ -1170,7 +1304,8 @@ namespace Discord.Rest
                 PrivacyLevel = privacyLevel,
                 StartTime = startTime,
                 Type = type,
-                Image = bannerImage.HasValue ? bannerImage.Value.ToModel() : Optional<ImageModel>.Unspecified
+                Image = bannerImage?.ToModel() ?? Optional<ImageModel>.Unspecified,
+                RecurrenceRule = recurrenceRule?.ToModel() ?? Optional<API.GuildScheduledEventRecurrenceRule>.Unspecified
             };
 
             if (location != null)
@@ -1403,6 +1538,7 @@ namespace Discord.Rest
                                       AllowList = args.AllowList.IsSpecified ? args.AllowList : rule.AllowList.ToArray(),
                                       MentionLimit = args.MentionLimit.IsSpecified ? args.MentionLimit : rule.MentionTotalLimit ?? Optional<int>.Unspecified,
                                       Presets = args.Presets.IsSpecified ? args.Presets : rule.Presets.ToArray(),
+                                      MentionRaidProtectionEnabled = args.MentionRaidProtectionEnabled.IsSpecified ? args.MentionRaidProtectionEnabled : rule.MentionRaidProtectionEnabled ?? Optional<bool>.Unspecified,
                                   } : Optional<API.TriggerMetadata>.Unspecified
             };
 

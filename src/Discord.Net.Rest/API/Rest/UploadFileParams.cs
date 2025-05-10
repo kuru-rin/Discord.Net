@@ -1,6 +1,7 @@
 using Discord.Net.Converters;
 using Discord.Net.Rest;
 using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -20,7 +21,7 @@ namespace Discord.API.Rest
         public Optional<Embed[]> Embeds { get; set; }
         public Optional<AllowedMentions> AllowedMentions { get; set; }
         public Optional<MessageReference> MessageReference { get; set; }
-        public Optional<ActionRowComponent[]> MessageComponent { get; set; }
+        public Optional<IMessageComponent[]> MessageComponent { get; set; }
         public Optional<MessageFlags?> Flags { get; set; }
         public Optional<ulong[]> Stickers { get; set; }
         public Optional<CreatePollParams> Poll { get; set; }
@@ -33,6 +34,9 @@ namespace Discord.API.Rest
         public IReadOnlyDictionary<string, object> ToDictionary()
         {
             var d = new Dictionary<string, object>();
+
+            if (Files.Any(x => x.Waveform is not null && x.DurationSeconds is not null))
+                Flags = Flags.GetValueOrDefault(MessageFlags.None) | MessageFlags.VoiceMessage;
 
             var payload = new Dictionary<string, object>();
             if (Content.IsSpecified)
@@ -71,7 +75,11 @@ namespace Discord.API.Rest
                 {
                     id = (ulong)n,
                     filename = filename,
-                    description = attachment.Description ?? Optional<string>.Unspecified
+                    description = attachment.Description ?? Optional<string>.Unspecified,
+                    duration_secs = attachment.DurationSeconds ?? Optional<double>.Unspecified,
+                    waveform = attachment.Waveform is null
+                        ? Optional<string>.Unspecified
+                        : Convert.ToBase64String(attachment.Waveform)
                 });
             }
 

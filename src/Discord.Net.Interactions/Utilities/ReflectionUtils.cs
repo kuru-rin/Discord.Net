@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,11 +24,11 @@ namespace Discord.Interactions
             {
                 var args = new object[parameters.Length];
                 for (int i = 0; i < parameters.Length; i++)
-                    args[i] = GetMember(commandService, services, parameters[i].ParameterType, typeInfo);
+                    args[i] = GetMember(commandService, services, parameters[i].ParameterType, typeInfo, parameters[i].GetCustomAttributes());
 
                 var obj = InvokeConstructor(constructor, args, typeInfo);
                 foreach (var property in properties)
-                    property.SetValue(obj, GetMember(commandService, services, property.PropertyType, typeInfo));
+                    property.SetValue(obj, GetMember(commandService, services, property.PropertyType, typeInfo, null));
                 return obj;
             };
         }
@@ -66,13 +67,20 @@ namespace Discord.Interactions
             }
             return result.ToArray();
         }
-        private static object GetMember(InteractionService commandService, IServiceProvider services, Type memberType, TypeInfo ownerType)
+        private static object GetMember(InteractionService commandService, IServiceProvider services, Type memberType, TypeInfo ownerType, IEnumerable<object> attributes)
         {
             if (memberType == typeof(InteractionService))
                 return commandService;
             if (memberType == typeof(IServiceProvider) || memberType == services.GetType())
                 return services;
-            var service = services.GetService(memberType);
+
+            var keyedAttribute = attributes?.FirstOrDefault(x => x.GetType() == typeof(FromKeyedServicesAttribute));
+            object service;
+            if (keyedAttribute != null)
+                service = services.GetKeyedServices(memberType, ((FromKeyedServicesAttribute)keyedAttribute).Key).First();
+            else
+                service = services.GetService(memberType);
+
             if (service != null)
                 return service;
             throw new InvalidOperationException($"Failed to create \"{ownerType.FullName}\", dependency \"{memberType.Name}\" was not found.");
@@ -119,10 +127,10 @@ namespace Discord.Interactions
                 var props = new object[properties.Length];
 
                 for (int i = 0; i < parameters.Length; i++)
-                    args[i] = GetMember(commandService, services, parameters[i].ParameterType, typeInfo);
+                    args[i] = GetMember(commandService, services, parameters[i].ParameterType, typeInfo, parameters[i].GetCustomAttributes());
 
                 for (int i = 0; i < properties.Length; i++)
-                    props[i] = GetMember(commandService, services, properties[i].PropertyType, typeInfo);
+                    props[i] = GetMember(commandService, services, properties[i].PropertyType, typeInfo, null);
 
                 var instance = lambda(args, props);
 
@@ -169,7 +177,8 @@ namespace Discord.Interactions
         {
             var instanceParam = Expression.Parameter(typeof(T), "instance");
             var prop = Expression.Property(instanceParam, propertyInfo);
-            return Expression.Lambda<Func<T, object>>(prop, instanceParam).Compile();
+            var cast = Expression.Convert(prop, typeof(object));
+            return Expression.Lambda<Func<T, object>>(cast, instanceParam).Compile();
         }
 
         internal static Func<T, object> CreateLambdaPropertyGetter(Type type, PropertyInfo propertyInfo)
@@ -177,7 +186,8 @@ namespace Discord.Interactions
             var instanceParam = Expression.Parameter(typeof(T), "instance");
             var instanceAccess = Expression.Convert(instanceParam, type);
             var prop = Expression.Property(instanceAccess, propertyInfo);
-            return Expression.Lambda<Func<T, object>>(prop, instanceParam).Compile();
+            var cast = Expression.Convert(prop, typeof(object));
+            return Expression.Lambda<Func<T, object>>(cast, instanceParam).Compile();
         }
 
         internal static Func<object[], object[], T> CreateLambdaMemberInit(TypeInfo typeInfo, ConstructorInfo constructor, Predicate<PropertyInfo> propertySelect = null)
@@ -218,6 +228,30 @@ namespace Discord.Interactions
 
                 return instance;
             };
+        }
+
+        /// <summary>
+        /// Checks whether <paramref name="type"/> or any base type of it overrides <see cref="object.ToString"/>.
+        /// </summary>
+        /// <param name="type">The type to check. If <c>null</c> <typeparamref name="T"/> will be used.</param>
+        internal static bool OverridesToString(Type type = null)
+        {
+            type ??= typeof(T);
+
+            do
+            {
+#if NET6_0_OR_GREATER
+                var method = type.GetMethod(nameof(ToString), bindingAttr: BindingFlags.Public | BindingFlags.Instance, types: Type.EmptyTypes);
+#else
+                var method = type.GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                    .SingleOrDefault(m => m.Name == nameof(ToString) && m.GetParameters().Length == 0);
+#endif
+                if (method != null)
+                    return true;
+            }
+            while ((type = type.BaseType) != typeof(object));
+
+            return false;
         }
     }
 }

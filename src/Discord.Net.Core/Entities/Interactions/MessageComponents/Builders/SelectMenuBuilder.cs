@@ -8,7 +8,7 @@ namespace Discord;
 /// <summary>
 ///     Represents a class used to build <see cref="SelectMenuComponent"/>'s.
 /// </summary>
-public class SelectMenuBuilder
+public class SelectMenuBuilder : IInteractableComponentBuilder
 {
     /// <summary>
     ///     The max length of a <see cref="SelectMenuComponent.Placeholder"/>.
@@ -33,12 +33,16 @@ public class SelectMenuBuilder
     public string CustomId
     {
         get => _customId;
-        set => _customId = value?.Length switch
+        set
         {
-            > ComponentBuilder.MaxCustomIdLength => throw new ArgumentOutOfRangeException(nameof(value), $"Custom Id length must be less or equal to {ComponentBuilder.MaxCustomIdLength}."),
-            0 => throw new ArgumentOutOfRangeException(nameof(value), "Custom Id length must be at least 1."),
-            _ => value
-        };
+            if (value is not null)
+            {
+                Preconditions.AtLeast(value.Length, 1, nameof(CustomId));
+                Preconditions.AtMost(value.Length, ComponentBuilder.MaxCustomIdLength, nameof(CustomId));
+            }
+
+            _customId = value;
+        }
     }
 
     /// <summary>
@@ -61,12 +65,16 @@ public class SelectMenuBuilder
     public string Placeholder
     {
         get => _placeholder;
-        set => _placeholder = value?.Length switch
+        set
         {
-            > MaxPlaceholderLength => throw new ArgumentOutOfRangeException(nameof(value), $"Placeholder length must be less or equal to {MaxPlaceholderLength}."),
-            0 => throw new ArgumentOutOfRangeException(nameof(value), "Placeholder length must be at least 1."),
-            _ => value
-        };
+            if (value is not null)
+            {
+                Preconditions.AtLeast(value.Length, 1, nameof(Placeholder));
+                Preconditions.AtMost(value.Length, MaxPlaceholderLength, nameof(Placeholder));
+            }
+
+            _placeholder = value;
+        }
     }
 
     /// <summary>
@@ -109,7 +117,6 @@ public class SelectMenuBuilder
         {
             if (value != null)
                 Preconditions.AtMost(value.Count, MaxOptionCount, nameof(Options));
-
             _options = value;
         }
     }
@@ -136,13 +143,16 @@ public class SelectMenuBuilder
         }
     }
 
-    private List<SelectMenuOptionBuilder> _options = new List<SelectMenuOptionBuilder>();
+    /// <inheritdoc/>
+    public int? Id { get; set; }
+
+    private List<SelectMenuOptionBuilder> _options = [];
     private int _minValues = 1;
     private int _maxValues = 1;
     private string _placeholder;
     private string _customId;
     private ComponentType _type = ComponentType.SelectMenu;
-    private List<SelectMenuDefaultValue> _defaultValues = new();
+    private List<SelectMenuDefaultValue> _defaultValues = [];
 
     /// <summary>
     ///     Creates a new instance of a <see cref="SelectMenuBuilder"/>.
@@ -163,6 +173,7 @@ public class SelectMenuBuilder
            .Select(x => new SelectMenuOptionBuilder(x.Label, x.Value, x.Description, x.Emote, x.IsDefault))
            .ToList();
         DefaultValues = selectMenu.DefaultValues?.ToList();
+        Id = selectMenu.Id;
     }
 
     /// <summary>
@@ -177,7 +188,7 @@ public class SelectMenuBuilder
     /// <param name="type">The <see cref="ComponentType"/> of this select menu.</param>
     /// <param name="channelTypes">The types of channels this menu can select (only valid on <see cref="ComponentType.ChannelSelect"/>s)</param>
     public SelectMenuBuilder(string customId, List<SelectMenuOptionBuilder> options = null, string placeholder = null, int maxValues = 1, int minValues = 1,
-        bool isDisabled = false, ComponentType type = ComponentType.SelectMenu, List<ChannelType> channelTypes = null, List<SelectMenuDefaultValue> defaultValues = null)
+        bool isDisabled = false, ComponentType type = ComponentType.SelectMenu, List<ChannelType> channelTypes = null, List<SelectMenuDefaultValue> defaultValues = null, int? id = null)
     {
         CustomId = customId;
         Options = options;
@@ -188,6 +199,7 @@ public class SelectMenuBuilder
         Type = type;
         ChannelTypes = channelTypes ?? new();
         DefaultValues = defaultValues ?? new();
+        Id = id;
     }
 
     /// <summary>
@@ -401,6 +413,9 @@ public class SelectMenuBuilder
     {
         var options = Options?.Select(x => x.Build()).ToList();
 
-        return new SelectMenuComponent(CustomId, options, Placeholder, MinValues, MaxValues, IsDisabled, Type, ChannelTypes, DefaultValues);
+        return new SelectMenuComponent(CustomId, options, Placeholder, MinValues, MaxValues, IsDisabled, Type, Id, ChannelTypes, DefaultValues);
     }
+
+    /// <inheritdoc/>
+    IMessageComponent IMessageComponentBuilder.Build() => Build();
 }

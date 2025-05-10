@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
 using Xunit;
 
 namespace Discord
@@ -108,6 +107,8 @@ namespace Discord
             AssertFlag(() => new GuildPermissions(setVoiceChannelStatus: true), GuildPermission.SetVoiceChannelStatus);
             AssertFlag(() => new GuildPermissions(sendPolls: true), GuildPermission.SendPolls);
             AssertFlag(() => new GuildPermissions(useExternalApps: true), GuildPermission.UseExternalApps);
+            AssertFlag(() => new GuildPermissions(useExternalSounds: true), GuildPermission.UseExternalSounds);
+            AssertFlag(() => new GuildPermissions(createEvents: true), GuildPermission.CreateEvents);
         }
 
         /// <summary>
@@ -194,6 +195,8 @@ namespace Discord
             AssertUtil(GuildPermission.SetVoiceChannelStatus, x => x.SetVoiceChannelStatus, (p, enable) => p.Modify(setVoiceChannelStatus: enable));
             AssertUtil(GuildPermission.SendPolls, x => x.SendPolls, (p, enable) => p.Modify(sendPolls: enable));
             AssertUtil(GuildPermission.UseExternalApps, x => x.UserExternalApps, (p, enable) => p.Modify(useExternalApps: enable));
+            AssertUtil(GuildPermission.UseExternalSounds, x => x.UserExternalSounds, (p, enable) => p.Modify(useExternalSounds: enable));
+            AssertUtil(GuildPermission.CreateEvents, x => x.CreateEvents, (p, enable) => p.Modify(createEvents: enable));
         }
     }
 }

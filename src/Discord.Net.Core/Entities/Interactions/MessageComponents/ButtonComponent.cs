@@ -3,10 +3,13 @@ namespace Discord;
 /// <summary>
 ///     Represents a <see cref="IMessageComponent"/> Button.
 /// </summary>
-public class ButtonComponent : IMessageComponent
+public class ButtonComponent : IInteractableComponent
 {
     /// <inheritdoc/>
     public ComponentType Type => ComponentType.Button;
+
+    /// <inheritdoc/>
+    public int? Id { get; }
 
     /// <summary>
     ///     Gets the <see cref="ButtonStyle"/> of this button, example buttons with each style can be found <see href="https://discord.com/assets/7bb017ce52cfd6575e21c058feb3883b.png">Here</see>.
@@ -48,17 +51,15 @@ public class ButtonComponent : IMessageComponent
     public ulong? SkuId { get; }
 
     /// <summary>
-    ///     Turns this button into a button builder.
+    ///     Converts a <see cref="ButtonComponent"/> to a <see cref="ButtonBuilder"/>.
     /// </summary>
-    /// <returns>
-    ///     A newly created button builder with the same properties as this button.
-    /// </returns>
     public ButtonBuilder ToBuilder()
-        => new (Label, CustomId, Style, Url, Emote, IsDisabled);
+        => new(this);
 
-    internal ButtonComponent(ButtonStyle style, string label, IEmote emote, string customId, string url, bool isDisabled, ulong? skuId)
+    internal ButtonComponent(ButtonStyle style, string label, IEmote emote, string customId, string url, bool isDisabled, ulong? skuId, int? id)
     {
         Style = style;
+        Id = id;
         Label = label;
         Emote = emote;
         CustomId = customId;
@@ -66,4 +67,7 @@ public class ButtonComponent : IMessageComponent
         IsDisabled = isDisabled;
         SkuId = skuId;
     }
+
+    /// <inheritdoc />
+    IMessageComponentBuilder IMessageComponent.ToBuilder() => ToBuilder();
 }

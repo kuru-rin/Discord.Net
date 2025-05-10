@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -370,6 +371,11 @@ namespace Discord.Interactions.Builders
             return this;
         }
 
+        /// <inheritdoc cref="Discord.Interactions.Builders.ModuleBuilder.AddAutocompleteCommand(System.String,Discord.Interactions.ExecuteCallback,System.Action{Discord.Interactions.Builders.AutocompleteCommandBuilder})" />
+        [Obsolete("This method will be deprecated soon. Use AddAutocompleteCommand instead.")]
+        public ModuleBuilder AddSlashCommand(string name, ExecuteCallback callback, Action<AutocompleteCommandBuilder> configure)
+            => AddAutocompleteCommand(name, callback, configure);
+
         /// <summary>
         ///     Adds autocomplete command builder to <see cref="AutocompleteCommands"/>.
         /// </summary>
@@ -379,7 +385,7 @@ namespace Discord.Interactions.Builders
         /// <returns>
         ///     The builder instance.
         /// </returns>
-        public ModuleBuilder AddSlashCommand(string name, ExecuteCallback callback, Action<AutocompleteCommandBuilder> configure)
+        public ModuleBuilder AddAutocompleteCommand(string name, ExecuteCallback callback, Action<AutocompleteCommandBuilder> configure)
         {
             var command = new AutocompleteCommandBuilder(this, name, callback);
             configure(command);
@@ -402,7 +408,7 @@ namespace Discord.Interactions.Builders
             _modalCommands.Add(command);
             return this;
         }
-        
+
         /// <summary>
         ///     Adds a modal command builder to <see cref="ModalCommands"/>.
         /// </summary>
@@ -461,6 +467,14 @@ namespace Discord.Interactions.Builders
         {
             if (TypeInfo is not null && ModuleClassBuilder.IsValidModuleDefinition(TypeInfo))
             {
+                using var scope = InteractionService._autoServiceScopes
+                    ? services.CreateScope()
+                    : null;
+
+                services = (InteractionService._autoServiceScopes
+                    ? scope?.ServiceProvider
+                    : services) ?? EmptyServiceProvider.Instance;
+
                 var instance = ReflectionUtils<IInteractionModuleBase>.CreateObject(TypeInfo, interactionService, services);
 
                 try
@@ -468,6 +482,7 @@ namespace Discord.Interactions.Builders
                     instance.Construct(this, interactionService);
                     var moduleInfo = new ModuleInfo(this, interactionService, services, parent);
                     instance.OnModuleBuilding(interactionService, moduleInfo);
+
                     return moduleInfo;
                 }
                 finally

@@ -1,10 +1,11 @@
 using Discord.Rest;
-using Newtonsoft.Json.Linq;
+
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
+
 using Model = Discord.API.Message;
 
 namespace Discord.WebSocket
@@ -16,8 +17,8 @@ namespace Discord.WebSocket
     {
         #region SocketMessage
         private long _timestampTicks;
-        private readonly List<SocketReaction> _reactions = new List<SocketReaction>();
-        private ImmutableArray<SocketUser> _userMentions = ImmutableArray.Create<SocketUser>();
+        private readonly List<SocketReaction> _reactions = [];
+        private ImmutableArray<SocketUser> _userMentions = [];
 
         /// <summary>
         ///     Gets the author of this message.
@@ -64,8 +65,8 @@ namespace Discord.WebSocket
         /// <inheritdoc />
         public MessageReference Reference { get; private set; }
 
-        /// <inheritdoc/>
-        public IReadOnlyCollection<ActionRowComponent> Components { get; private set; }
+        /// <inheritdoc cref="IMessage.Components"/>
+        public IReadOnlyCollection<IMessageComponent> Components { get; private set; }
 
         /// <summary>
         ///     Gets the interaction this message is a response to.
@@ -113,18 +114,26 @@ namespace Discord.WebSocket
         /// <returns>
         ///     Collection of WebSocket-based guild channels.
         /// </returns>
-        public virtual IReadOnlyCollection<SocketGuildChannel> MentionedChannels => ImmutableArray.Create<SocketGuildChannel>();
+        public virtual IReadOnlyCollection<SocketGuildChannel> MentionedChannels => [];
         /// <summary>
         ///     Returns the roles mentioned in this message.
         /// </summary>
+        /// <remarks>
+        ///     This collection may be missing values due to the guild being missing from cache (i.e. in user app interaction context).
+        ///     In that case you can use the <see cref="MentionedRoleIds"/> property.
+        /// </remarks>
         /// <returns>
         ///     Collection of WebSocket-based roles.
         /// </returns>
-        public virtual IReadOnlyCollection<SocketRole> MentionedRoles => ImmutableArray.Create<SocketRole>();
+        public virtual IReadOnlyCollection<SocketRole> MentionedRoles => [];
+
         /// <inheritdoc />
-        public virtual IReadOnlyCollection<ITag> Tags => ImmutableArray.Create<ITag>();
+        public virtual IReadOnlyCollection<ulong> MentionedRoleIds => [];
+
         /// <inheritdoc />
-        public virtual IReadOnlyCollection<SocketSticker> Stickers => ImmutableArray.Create<SocketSticker>();
+        public virtual IReadOnlyCollection<ITag> Tags => [];
+        /// <inheritdoc />
+        public virtual IReadOnlyCollection<SocketSticker> Stickers => [];
         /// <inheritdoc />
         public IReadOnlyDictionary<IEmote, ReactionMetadata> Reactions => _reactions.GroupBy(r => r.Emote).ToDictionary(x => x.Key, x => new ReactionMetadata { ReactionCount = x.Count(), IsMe = x.Any(y => y.UserId == Discord.CurrentUser.Id) });
         /// <summary>
@@ -134,6 +143,8 @@ namespace Discord.WebSocket
         ///     Collection of WebSocket-based users.
         /// </returns>
         public IReadOnlyCollection<SocketUser> MentionedUsers => _userMentions;
+
+        public IReadOnlyCollection<ulong> MentionedUserIds { get; private set; }
         /// <inheritdoc />
         public DateTimeOffset Timestamp => DateTimeUtils.FromTicks(_timestampTicks);
 
@@ -198,84 +209,41 @@ namespace Discord.WebSocket
                     GuildId = model.Reference.Value.GuildId,
                     InternalChannelId = model.Reference.Value.ChannelId,
                     MessageId = model.Reference.Value.MessageId,
-                    FailIfNotExists = model.Reference.Value.FailIfNotExists
+                    FailIfNotExists = model.Reference.Value.FailIfNotExists,
+                    ReferenceType = model.Reference.Value.Type
                 };
             }
 
-            if (model.Components.IsSpecified)
-            {
-                Components = model.Components.Value.Select(x => new ActionRowComponent(x.Components.Select<IMessageComponent, IMessageComponent>(y =>
-                {
-                    switch (y.Type)
-                    {
-                        case ComponentType.Button:
-                            {
-                                var parsed = (API.ButtonComponent)y;
-                                return new Discord.ButtonComponent(
-                                    parsed.Style,
-                                    parsed.Label.GetValueOrDefault(),
-                                    parsed.Emote.IsSpecified
-                                        ? parsed.Emote.Value.Id.HasValue
-                                            ? new Emote(parsed.Emote.Value.Id.Value, parsed.Emote.Value.Name, parsed.Emote.Value.Animated.GetValueOrDefault())
-                                            : new Emoji(parsed.Emote.Value.Name)
-                                        : null,
-                                    parsed.CustomId.GetValueOrDefault(),
-                                    parsed.Url.GetValueOrDefault(),
-                                    parsed.Disabled.GetValueOrDefault(),
-                                    parsed.SkuId.ToNullable());
-                            }
-                        case ComponentType.SelectMenu:
-                            {
-                                var parsed = (API.SelectMenuComponent)y;
-                                return new SelectMenuComponent(
-                                    parsed.CustomId,
-                                    parsed.Options.Select(z => new SelectMenuOption(
-                                        z.Label,
-                                        z.Value,
-                                        z.Description.GetValueOrDefault(),
-                                        z.Emoji.IsSpecified
-                                        ? z.Emoji.Value.Id.HasValue
-                                            ? new Emote(z.Emoji.Value.Id.Value, z.Emoji.Value.Name, z.Emoji.Value.Animated.GetValueOrDefault())
-                                            : new Emoji(z.Emoji.Value.Name)
-                                        : null,
-                                        z.Default.ToNullable())).ToList(),
-                                    parsed.Placeholder.GetValueOrDefault(),
-                                    parsed.MinValues,
-                                    parsed.MaxValues,
-                                    parsed.Disabled,
-                                    parsed.Type,
-                                    parsed.ChannelTypes.GetValueOrDefault(),
-                                    parsed.DefaultValues.IsSpecified
-                                        ? parsed.DefaultValues.Value.Select(x => new SelectMenuDefaultValue(x.Id, x.Type))
-                                        : Array.Empty<SelectMenuDefaultValue>()
-                                    );
-                            }
-                        default:
-                            return null;
-                    }
-                }).ToList())).ToImmutableArray();
-            }
-            else
-                Components = new List<ActionRowComponent>();
+            Components = model.Components.IsSpecified
+                ? model.Components.Value.Select(x => x.ToEntity()).ToImmutableArray()
+                : [];
 
             if (model.UserMentions.IsSpecified)
             {
-                var value = model.UserMentions.Value;
-                if (value.Length > 0)
+                if (model.UserMentions.Value.Length == 0)
                 {
-                    var newMentions = ImmutableArray.CreateBuilder<SocketUser>(value.Length);
-                    for (int i = 0; i < value.Length; i++)
+                    _userMentions = ImmutableArray<SocketUser>.Empty;
+                    MentionedUserIds = ImmutableArray<ulong>.Empty;
+                }
+                else
+                {
+                    MentionedUserIds = model.UserMentions.Value.Select(x => x.Id).ToImmutableArray();
+
+                    // Create a new list of mentions from the API model
+                    var newMentions = ImmutableArray.CreateBuilder<SocketUser>(model.UserMentions.Value.Length);
+                    foreach (var mention in model.UserMentions.Value)
                     {
-                        var val = value[i];
-                        if (val != null)
+                        if (mention is not null)
                         {
-                            var user = Channel.GetUserAsync(val.Id, CacheMode.CacheOnly).GetAwaiter().GetResult() as SocketUser;
-                            if (user != null)
-                                newMentions.Add(user);
-                            else
-                                newMentions.Add(SocketUnknownUser.Create(Discord, state, val));
+                            SocketUser user = null;
+
+                            if (Channel is SocketChannel socketChannel)
+                                user = socketChannel.GetUser(mention.Id);
+
+                            newMentions.Add(user ?? SocketUnknownUser.Create(Discord, state, mention));
                         }
                     }
+
                     _userMentions = newMentions.ToImmutable();
                 }
             }
@@ -313,7 +281,7 @@ namespace Discord.WebSocket
                         ? new GuildProductPurchase(model.PurchaseNotification.Value.ProductPurchase.Value.ListingId, model.PurchaseNotification.Value.ProductPurchase.Value.ProductName)
                         : null);
             }
-            
+
             if (model.Call.IsSpecified)
                 CallData = new MessageCallData(model.Call.Value.Participants, model.Call.Value.EndedTimestamp.ToNullable());
         }
@@ -344,9 +312,7 @@ namespace Discord.WebSocket
         /// <inheritdoc />
         IReadOnlyCollection<ulong> IMessage.MentionedChannelIds => MentionedChannels.Select(x => x.Id).ToImmutableArray();
         /// <inheritdoc />
-        IReadOnlyCollection<ulong> IMessage.MentionedRoleIds => MentionedRoles.Select(x => x.Id).ToImmutableArray();
-        /// <inheritdoc />
-        IReadOnlyCollection<ulong> IMessage.MentionedUserIds => MentionedUsers.Select(x => x.Id).ToImmutableArray();
+        IReadOnlyCollection<ulong> IMessage.MentionedUserIds => MentionedUserIds;
 
         /// <inheritdoc/>
         IReadOnlyCollection<IMessageComponent> IMessage.Components => Components;

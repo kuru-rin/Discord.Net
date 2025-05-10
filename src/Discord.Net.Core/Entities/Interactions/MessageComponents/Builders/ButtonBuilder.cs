@@ -7,8 +7,10 @@ namespace Discord;
 /// <summary>
 ///     Represents a class used to build <see cref="ButtonComponent"/>'s.
 /// </summary>
-public class ButtonBuilder
+public class ButtonBuilder : IInteractableComponentBuilder
 {
+    public ComponentType Type => ComponentType.Button;
+
     /// <summary>
     ///     The max length of a <see cref="ButtonComponent.Label"/>.
     /// </summary>
@@ -22,12 +24,16 @@ public class ButtonBuilder
     public string Label
     {
         get => _label;
-        set => _label = value?.Length switch
+        set
         {
-            > MaxButtonLabelLength => throw new ArgumentOutOfRangeException(nameof(value), $"Label length must be less or equal to {MaxButtonLabelLength}."),
-            0 => throw new ArgumentOutOfRangeException(nameof(value), "Label length must be at least 1."),
-            _ => value
-        };
+            if (value is not null)
+            {
+                Preconditions.AtLeast(value.Length, 1, nameof(Label));
+                Preconditions.AtMost(value.Length, MaxButtonLabelLength, nameof(Label));
+            }
+
+            _label = value;
+        }
     }
 
     /// <summary>
@@ -38,12 +44,16 @@ public class ButtonBuilder
     public string CustomId
     {
         get => _customId;
-        set => _customId = value?.Length switch
+        set
         {
-            > ComponentBuilder.MaxCustomIdLength => throw new ArgumentOutOfRangeException(nameof(value), $"Custom Id length must be less or equal to {ComponentBuilder.MaxCustomIdLength}."),
-            0 => throw new ArgumentOutOfRangeException(nameof(value), "Custom Id length must be at least 1."),
-            _ => value
-        };
+            if (value is not null)
+            {
+                Preconditions.AtLeast(value.Length, 1, nameof(CustomId));
+                Preconditions.AtMost(value.Length, ComponentBuilder.MaxCustomIdLength, nameof(CustomId));
+            }
+
+            _customId = value;
+        }
     }
 
     /// <summary>
@@ -74,6 +84,8 @@ public class ButtonBuilder
     /// </remarks>
     public ulong? SkuId { get; set; }
 
+    public int? Id { get; set; }
+
     private string _label;
     private string _customId;
 
@@ -92,7 +104,7 @@ public class ButtonBuilder
     /// <param name="emote">The emote of this button.</param>
     /// <param name="isDisabled">Disabled this button or not.</param>
     /// <param name="skuId">The sku id of this button.</param>
-    public ButtonBuilder(string label = null, string customId = null, ButtonStyle style = ButtonStyle.Primary, string url = null, IEmote emote = null, bool isDisabled = false, ulong? skuId = null)
+    public ButtonBuilder(string label = null, string customId = null, ButtonStyle style = ButtonStyle.Primary, string url = null, IEmote emote = null, bool isDisabled = false, ulong? skuId = null, int? id = null)
     {
         CustomId = customId;
         Style = style;
@@ -101,6 +113,7 @@ public class ButtonBuilder
         IsDisabled = isDisabled;
         Emote = emote;
         SkuId = skuId;
+        Id = id;
     }
 
     /// <summary>
@@ -115,6 +128,7 @@ public class ButtonBuilder
         IsDisabled = button.IsDisabled;
         Emote = button.Emote;
         SkuId = button.SkuId;
+        Id = button.Id;
     }
 
     /// <summary>
@@ -294,7 +308,6 @@ public class ButtonBuilder
                     throw new InvalidOperationException("A button must have an Emote or a label!");
                 if (string.IsNullOrWhiteSpace(CustomId))
                     throw new InvalidOperationException("Non-link and non-premium buttons must have a custom id associated with them");
-
             }
             break;
 
@@ -316,6 +329,8 @@ public class ButtonBuilder
             break;
         }
 
-        return new ButtonComponent(Style, Label, Emote, CustomId, Url, IsDisabled, SkuId);
+        return new ButtonComponent(Style, Label, Emote, CustomId, Url, IsDisabled, SkuId, Id);
     }
+
+    IMessageComponent IMessageComponentBuilder.Build() => Build();
 }

@@ -91,6 +91,9 @@ namespace Discord.WebSocket
         public IReadOnlyCollection<RestEntitlement> Entitlements { get; private set; }
 
         /// <inheritdoc/>
+        public ulong AttachmentSizeLimit { get; private set; }
+
+        /// <inheritdoc/>
         public IReadOnlyDictionary<ApplicationIntegrationType, ulong> IntegrationOwners { get; private set; }
 
         internal SocketInteraction(DiscordSocketClient client, ulong id, ISocketMessageChannel channel, SocketUser user)
@@ -194,6 +197,8 @@ namespace Discord.WebSocket
                     _ => null
                 };
             }
+
+            AttachmentSizeLimit = model.AttachmentSizeLimit;
         }
 
         /// <summary>
@@ -211,7 +216,7 @@ namespace Discord.WebSocket
         /// <exception cref="ArgumentOutOfRangeException">Message content is too long, length must be less or equal to <see cref="DiscordConfig.MaxMessageSize"/>.</exception>
         /// <exception cref="InvalidOperationException">The parameters provided were invalid or the token was invalid.</exception>
         public abstract Task RespondAsync(string text = null, Embed[] embeds = null, bool isTTS = false,
-            bool ephemeral = false, AllowedMentions allowedMentions = null, MessageComponent components = null, Embed embed = null, RequestOptions options = null, PollProperties poll = null);
+            bool ephemeral = false, AllowedMentions allowedMentions = null, MessageComponent components = null, Embed embed = null, RequestOptions options = null, PollProperties poll = null, MessageFlags flags = MessageFlags.None);
 
         /// <summary>
         ///     Responds to this interaction with a file attachment.
@@ -232,11 +237,11 @@ namespace Discord.WebSocket
         ///     contains the sent message.
         /// </returns>
         public async Task RespondWithFileAsync(Stream fileStream, string fileName, string text = null, Embed[] embeds = null, bool isTTS = false, bool ephemeral = false,
-            AllowedMentions allowedMentions = null, MessageComponent components = null, Embed embed = null, RequestOptions options = null, PollProperties poll = null)
+            AllowedMentions allowedMentions = null, MessageComponent components = null, Embed embed = null, RequestOptions options = null, PollProperties poll = null, MessageFlags flags = MessageFlags.None)
         {
             using (var file = new FileAttachment(fileStream, fileName))
             {
-                await RespondWithFileAsync(file, text, embeds, isTTS, ephemeral, allowedMentions, components, embed, options, poll).ConfigureAwait(false);
+                await RespondWithFileAsync(file, text, embeds, isTTS, ephemeral, allowedMentions, components, embed, options, poll, flags).ConfigureAwait(false);
             }
         }
 
@@ -259,11 +264,11 @@ namespace Discord.WebSocket
         ///     contains the sent message.
         /// </returns>
         public async Task RespondWithFileAsync(string filePath, string fileName = null, string text = null, Embed[] embeds = null, bool isTTS = false, bool ephemeral = false,
-            AllowedMentions allowedMentions = null, MessageComponent components = null, Embed embed = null, RequestOptions options = null, PollProperties poll = null)
+            AllowedMentions allowedMentions = null, MessageComponent components = null, Embed embed = null, RequestOptions options = null, PollProperties poll = null, MessageFlags flags = MessageFlags.None)
         {
             using (var file = new FileAttachment(filePath, fileName))
             {
-                await RespondWithFileAsync(file, text, embeds, isTTS, ephemeral, allowedMentions, components, embed, options, poll).ConfigureAwait(false);
+                await RespondWithFileAsync(file, text, embeds, isTTS, ephemeral, allowedMentions, components, embed, options, poll, flags).ConfigureAwait(false);
             }
         }
 
@@ -285,8 +290,8 @@ namespace Discord.WebSocket
         ///     contains the sent message.
         /// </returns>
         public Task RespondWithFileAsync(FileAttachment attachment, string text = null, Embed[] embeds = null, bool isTTS = false, bool ephemeral = false,
-            AllowedMentions allowedMentions = null, MessageComponent components = null, Embed embed = null, RequestOptions options = null, PollProperties poll = null)
-            => RespondWithFilesAsync(new FileAttachment[] { attachment }, text, embeds, isTTS, ephemeral, allowedMentions, components, embed, options, poll);
+            AllowedMentions allowedMentions = null, MessageComponent components = null, Embed embed = null, RequestOptions options = null, PollProperties poll = null, MessageFlags flags = MessageFlags.None)
+            => RespondWithFilesAsync([attachment], text, embeds, isTTS, ephemeral, allowedMentions, components, embed, options, poll, flags);
 
         /// <summary>
         ///     Responds to this interaction with a collection of file attachments.
@@ -306,7 +311,7 @@ namespace Discord.WebSocket
         ///     contains the sent message.
         /// </returns>
         public abstract Task RespondWithFilesAsync(IEnumerable<FileAttachment> attachments, string text = null, Embed[] embeds = null, bool isTTS = false, bool ephemeral = false,
-            AllowedMentions allowedMentions = null, MessageComponent components = null, Embed embed = null, RequestOptions options = null, PollProperties poll = null);
+            AllowedMentions allowedMentions = null, MessageComponent components = null, Embed embed = null, RequestOptions options = null, PollProperties poll = null, MessageFlags flags = MessageFlags.None);
 
         /// <summary>
         ///     Sends a followup message for this interaction.
@@ -324,7 +329,7 @@ namespace Discord.WebSocket
         ///     The sent message.
         /// </returns>
         public abstract Task<RestFollowupMessage> FollowupAsync(string text = null, Embed[] embeds = null, bool isTTS = false, bool ephemeral = false,
-             AllowedMentions allowedMentions = null, MessageComponent components = null, Embed embed = null, RequestOptions options = null, PollProperties poll = null);
+             AllowedMentions allowedMentions = null, MessageComponent components = null, Embed embed = null, RequestOptions options = null, PollProperties poll = null, MessageFlags flags = MessageFlags.None);
 
         /// <summary>
         ///     Sends a followup message for this interaction.
@@ -344,11 +349,11 @@ namespace Discord.WebSocket
         ///     The sent message.
         /// </returns>
         public async Task<RestFollowupMessage> FollowupWithFileAsync(Stream fileStream, string fileName, string text = null, Embed[] embeds = null, bool isTTS = false, bool ephemeral = false,
-            AllowedMentions allowedMentions = null, MessageComponent components = null, Embed embed = null, RequestOptions options = null, PollProperties poll = null)
+            AllowedMentions allowedMentions = null, MessageComponent components = null, Embed embed = null, RequestOptions options = null, PollProperties poll = null, MessageFlags flags = MessageFlags.None)
         {
             using (var file = new FileAttachment(fileStream, fileName))
             {
-                return await FollowupWithFileAsync(file, text, embeds, isTTS, ephemeral, allowedMentions, components, embed, options, poll).ConfigureAwait(false);
+                return await FollowupWithFileAsync(file, text, embeds, isTTS, ephemeral, allowedMentions, components, embed, options, poll, flags).ConfigureAwait(false);
             }
         }
 
@@ -370,11 +375,11 @@ namespace Discord.WebSocket
         ///     The sent message.
         /// </returns>
         public async Task<RestFollowupMessage> FollowupWithFileAsync(string filePath, string fileName = null, string text = null, Embed[] embeds = null, bool isTTS = false, bool ephemeral = false,
-            AllowedMentions allowedMentions = null, MessageComponent components = null, Embed embed = null, RequestOptions options = null, PollProperties poll = null)
+            AllowedMentions allowedMentions = null, MessageComponent components = null, Embed embed = null, RequestOptions options = null, PollProperties poll = null, MessageFlags flags = MessageFlags.None)
         {
             using (var file = new FileAttachment(filePath, fileName))
             {
-                return await FollowupWithFileAsync(file, text, embeds, isTTS, ephemeral, allowedMentions, components, embed, options, poll).ConfigureAwait(false);
+                return await FollowupWithFileAsync(file, text, embeds, isTTS, ephemeral, allowedMentions, components, embed, options, poll, flags).ConfigureAwait(false);
             }
         }
 
@@ -396,8 +401,8 @@ namespace Discord.WebSocket
         ///     contains the sent message.
         /// </returns>
         public Task<RestFollowupMessage> FollowupWithFileAsync(FileAttachment attachment, string text = null, Embed[] embeds = null, bool isTTS = false, bool ephemeral = false,
-            AllowedMentions allowedMentions = null, MessageComponent components = null, Embed embed = null, RequestOptions options = null, PollProperties poll = null)
-            => FollowupWithFilesAsync(new FileAttachment[] { attachment }, text, embeds, isTTS, ephemeral, allowedMentions, components, embed, options, poll);
+            AllowedMentions allowedMentions = null, MessageComponent components = null, Embed embed = null, RequestOptions options = null, PollProperties poll = null, MessageFlags flags = MessageFlags.None)
+            => FollowupWithFilesAsync(new FileAttachment[] { attachment }, text, embeds, isTTS, ephemeral, allowedMentions, components, embed, options, poll, flags);
 
         /// <summary>
         ///     Sends a followup message for this interaction.
@@ -417,7 +422,7 @@ namespace Discord.WebSocket
         ///     contains the sent message.
         /// </returns>
         public abstract Task<RestFollowupMessage> FollowupWithFilesAsync(IEnumerable<FileAttachment> attachments, string text = null, Embed[] embeds = null, bool isTTS = false, bool ephemeral = false,
-            AllowedMentions allowedMentions = null, MessageComponent components = null, Embed embed = null, RequestOptions options = null, PollProperties poll = null);
+            AllowedMentions allowedMentions = null, MessageComponent components = null, Embed embed = null, RequestOptions options = null, PollProperties poll = null, MessageFlags flags = MessageFlags.None);
 
         /// <summary>
         ///     Gets the original response for this interaction.
@@ -504,26 +509,26 @@ namespace Discord.WebSocket
             => await ModifyOriginalResponseAsync(func, options).ConfigureAwait(false);
         /// <inheritdoc/>
         async Task IDiscordInteraction.RespondAsync(string text, Embed[] embeds, bool isTTS, bool ephemeral, AllowedMentions allowedMentions, MessageComponent components,
-            Embed embed, RequestOptions options, PollProperties poll)
-            => await RespondAsync(text, embeds, isTTS, ephemeral, allowedMentions, components, embed, options, poll).ConfigureAwait(false);
+            Embed embed, RequestOptions options, PollProperties poll, MessageFlags flags)
+            => await RespondAsync(text, embeds, isTTS, ephemeral, allowedMentions, components, embed, options, poll, flags).ConfigureAwait(false);
         /// <inheritdoc/>
         async Task<IUserMessage> IDiscordInteraction.FollowupAsync(string text, Embed[] embeds, bool isTTS, bool ephemeral, AllowedMentions allowedMentions,
-            MessageComponent components, Embed embed, RequestOptions options, PollProperties poll)
-            => await FollowupAsync(text, embeds, isTTS, ephemeral, allowedMentions, components, embed, options, poll).ConfigureAwait(false);
+            MessageComponent components, Embed embed, RequestOptions options, PollProperties poll, MessageFlags flags)
+            => await FollowupAsync(text, embeds, isTTS, ephemeral, allowedMentions, components, embed, options, poll, flags).ConfigureAwait(false);
         /// <inheritdoc/>
         async Task<IUserMessage> IDiscordInteraction.FollowupWithFilesAsync(IEnumerable<FileAttachment> attachments, string text, Embed[] embeds, bool isTTS,
-            bool ephemeral, AllowedMentions allowedMentions, MessageComponent components, Embed embed, RequestOptions options, PollProperties poll)
-            => await FollowupWithFilesAsync(attachments, text, embeds, isTTS, ephemeral, allowedMentions, components, embed, options, poll).ConfigureAwait(false);
+            bool ephemeral, AllowedMentions allowedMentions, MessageComponent components, Embed embed, RequestOptions options, PollProperties poll, MessageFlags flags)
+            => await FollowupWithFilesAsync(attachments, text, embeds, isTTS, ephemeral, allowedMentions, components, embed, options, poll, flags).ConfigureAwait(false);
 #if NETCOREAPP3_0_OR_GREATER != true
         /// <inheritdoc/>
-        async Task<IUserMessage> IDiscordInteraction.FollowupWithFileAsync(Stream fileStream, string fileName, string text, Embed[] embeds, bool isTTS, bool ephemeral, AllowedMentions allowedMentions, MessageComponent components, Embed embed, RequestOptions options, PollProperties poll)
-            => await FollowupWithFileAsync(fileStream, fileName, text, embeds, isTTS, ephemeral, allowedMentions, components, embed, options, poll).ConfigureAwait(false);
+        async Task<IUserMessage> IDiscordInteraction.FollowupWithFileAsync(Stream fileStream, string fileName, string text, Embed[] embeds, bool isTTS, bool ephemeral, AllowedMentions allowedMentions, MessageComponent components, Embed embed, RequestOptions options, PollProperties poll, MessageFlags flags)
+            => await FollowupWithFileAsync(fileStream, fileName, text, embeds, isTTS, ephemeral, allowedMentions, components, embed, options, poll, flags).ConfigureAwait(false);
         /// <inheritdoc/>
-        async Task<IUserMessage> IDiscordInteraction.FollowupWithFileAsync(string filePath, string fileName, string text, Embed[] embeds, bool isTTS, bool ephemeral, AllowedMentions allowedMentions, MessageComponent components, Embed embed, RequestOptions options, PollProperties poll)
-            => await FollowupWithFileAsync(filePath, fileName, text, embeds, isTTS, ephemeral, allowedMentions, components, embed, options, poll).ConfigureAwait(false);
+        async Task<IUserMessage> IDiscordInteraction.FollowupWithFileAsync(string filePath, string fileName, string text, Embed[] embeds, bool isTTS, bool ephemeral, AllowedMentions allowedMentions, MessageComponent components, Embed embed, RequestOptions options, PollProperties poll, MessageFlags flags)
+            => await FollowupWithFileAsync(filePath, fileName, text, embeds, isTTS, ephemeral, allowedMentions, components, embed, options, poll, flags).ConfigureAwait(false);
         /// <inheritdoc/>
-        async Task<IUserMessage> IDiscordInteraction.FollowupWithFileAsync(FileAttachment attachment, string text, Embed[] embeds, bool isTTS, bool ephemeral, AllowedMentions allowedMentions, MessageComponent components, Embed embed, RequestOptions options, PollProperties poll)
-            => await FollowupWithFileAsync(attachment, text, embeds, isTTS, ephemeral, allowedMentions, components, embed, options, poll).ConfigureAwait(false);
+        async Task<IUserMessage> IDiscordInteraction.FollowupWithFileAsync(FileAttachment attachment, string text, Embed[] embeds, bool isTTS, bool ephemeral, AllowedMentions allowedMentions, MessageComponent components, Embed embed, RequestOptions options, PollProperties poll, MessageFlags flags)
+            => await FollowupWithFileAsync(attachment, text, embeds, isTTS, ephemeral, allowedMentions, components, embed, options, poll, flags).ConfigureAwait(false);
 #endif
         #endregion
     }

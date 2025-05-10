@@ -3,10 +3,13 @@ using System.Linq;
 
 namespace Discord.API
 {
-    internal class SelectMenuComponent : IMessageComponent
+    internal class SelectMenuComponent : IInteractableComponent
     {
         [JsonProperty("type")]
         public ComponentType Type { get; set; }
+
+        [JsonProperty("id")]
+        public Optional<int> Id { get; set; }
 
         [JsonProperty("custom_id")]
         public string CustomId { get; set; }
@@ -51,6 +54,11 @@ namespace Discord.API
             Disabled = component.IsDisabled;
             ChannelTypes = component.ChannelTypes.ToArray();
             DefaultValues = component.DefaultValues.Select(x => new SelectMenuDefaultValue {Id = x.Id, Type = x.Type}).ToArray();
+            Id = component.Id ?? Optional<int>.Unspecified;
         }
+
+        [JsonIgnore]
+        int? IMessageComponent.Id => Id.ToNullable();
+        IMessageComponentBuilder IMessageComponent.ToBuilder() => null;
     }
 }
