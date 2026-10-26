@@ -116,7 +116,7 @@ namespace Discord.Interactions
                         break;
                     case FileUploadComponentInfo fileUploadComponent:
                         {
-                            var inputBuilder = new FileUploadComponentBuilder(fileUploadComponent.CustomId, fileUploadComponent.MinValues, fileUploadComponent.MaxValues, fileUploadComponent.IsRequired, fileUploadComponent.Id);
+                            var inputBuilder = new FileUploadComponentBuilder(fileUploadComponent.CustomId, fileUploadComponent.MinValues, fileUploadComponent.MaxValues, fileUploadComponent.IsRequired, fileUploadComponent.Id, fileUploadComponent.FileTypes);
 
                             var instanceValue = modalInstance is not null ? fileUploadComponent.Getter(modalInstance) : null;
                             await fileUploadComponent.TypeConverter.WriteAsync(inputBuilder, interaction, fileUploadComponent, instanceValue);
@@ -132,6 +132,53 @@ namespace Discord.Interactions
 
                             var componentBuilder = new TextDisplayBuilder(content, textDisplayComponent.Id);
                             builder.AddTextDisplay(componentBuilder);
+                        }
+                        break;
+                    case CheckboxComponentInfo checkboxComponent:
+                        {
+                            var inputBuilder = new CheckboxBuilder(checkboxComponent.CustomId, checkboxComponent.DefaultState, checkboxComponent.Id);
+
+                            var instanceValue = modalInstance is not null ? checkboxComponent.Getter(modalInstance) : null;
+                            await checkboxComponent.TypeConverter.WriteAsync(inputBuilder, interaction, checkboxComponent, instanceValue);
+
+                            var labelBuilder = new LabelBuilder(checkboxComponent.Label, inputBuilder, checkboxComponent.Description);
+                            builder.AddLabel(labelBuilder);
+                        }
+                        break;
+                    case CheckboxGroupComponentInfo checkboxGroupComponent:
+                    {
+                        var inputBuilder = new CheckboxGroupBuilder(checkboxGroupComponent.CustomId,
+                            checkboxGroupComponent.Options.Select(x => new CheckboxGroupOptionProperties(x.Value, x.Label, x.Description, x.DefaultState)).ToList(),
+                            checkboxGroupComponent.MinValues,
+                            checkboxGroupComponent.MaxValues,
+                            checkboxGroupComponent.IsRequired,
+                            checkboxGroupComponent.Id);
+
+                        var instanceValue = modalInstance is not null
+                            ? checkboxGroupComponent.Getter(modalInstance)
+                            : null;
+                        await checkboxGroupComponent.TypeConverter.WriteAsync(inputBuilder, interaction,
+                            checkboxGroupComponent, instanceValue);
+
+                        var labelBuilder = new LabelBuilder(checkboxGroupComponent.Label, inputBuilder,
+                            checkboxGroupComponent.Description);
+                        builder.AddLabel(labelBuilder);
+                    }
+                        break;
+                    case RadioGroupComponentInfo radioGroupComponent:
+                        {
+                            var inputBuilder = new RadioGroupBuilder(radioGroupComponent.CustomId,
+                                radioGroupComponent.Options.Select(x => new RadioGroupOptionProperties(x.Value, x.Label, x.Description, x.IsDefault)).ToList(),
+                                radioGroupComponent.IsRequired, radioGroupComponent.Id);
+
+                            var instanceValue =
+                                modalInstance is not null ? radioGroupComponent.Getter(modalInstance) : null;
+                            await radioGroupComponent.TypeConverter.WriteAsync(inputBuilder, interaction,
+                                radioGroupComponent, instanceValue);
+
+                            var labelBuilder = new LabelBuilder(radioGroupComponent.Label, inputBuilder,
+                                radioGroupComponent.Description);
+                            builder.AddLabel(labelBuilder);
                         }
                         break;
                     default:
